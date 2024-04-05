@@ -32,12 +32,8 @@ func initTags(client postgre.Client) error {
 		VALUES ($1)
 	`
 
-	var id int
 	for _, tag := range tags {
-		row := client.QueryRow(context.Background(), q, tag.name)
-		if err := row.Scan(&id); err != nil {
-			return err
-		}
+		client.QueryRow(context.Background(), q, tag.name)
 	}
 	return nil
 }
@@ -67,12 +63,8 @@ func initFeatures(client postgre.Client) error {
 		INSERT INTO features (name)
 		VALUES ($1)
 	`
-	var id int
 	for _, feature := range features {
-		row := client.QueryRow(context.Background(), q, feature.name)
-		if err := row.Scan(&id); err != nil {
-			return err
-		}
+		client.QueryRow(context.Background(), q, feature.name)
 	}
 	return nil
 }

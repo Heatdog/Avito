@@ -1,0 +1,27 @@
+
+services:
+  server_avito_go:
+    image: server_avito_go:local
+    container_name: ps-server-avito
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgre
+    networks:
+      - ps
+
+  postgre:
+    image: postgres:16-alpine
+    container_name: ps-postgres-avito
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=123
+      - POSTGRES_DB=banners_database
+    networks:
+      - ps
+    volumes:
+      - ./migrations/Postgre.sql:/docker-entrypoint-initdb.d/Postgre.sql
+
+networks:
+  ps:
+    driver: bridge

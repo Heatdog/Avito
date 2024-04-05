@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"os"
 
+	_ "github.com/Heatdog/Avito/docs"
+
 	"github.com/Heatdog/Avito/internal/config"
 	"github.com/Heatdog/Avito/internal/migrations"
 	banner_postgre "github.com/Heatdog/Avito/internal/repository/banner/postgre"
@@ -15,8 +17,20 @@ import (
 	middleware_transport "github.com/Heatdog/Avito/internal/transport/middleware"
 	"github.com/Heatdog/Avito/pkg/client/postgre"
 	"github.com/gorilla/mux"
+	httpSwagger "github.com/swaggo/http-swagger/v2"
 )
 
+// swag init --pd -g internal/app/app.go
+
+// @title Сервис баннеров
+// @description API сервер для сервиса баннеров
+
+// @host localhost:8080
+// @BasePath /
+
+// @securityDefinitions.apiKey ApiKeyAuth
+// @in header
+// @name Authorization
 func App() {
 	opt := &slog.HandlerOptions{
 		AddSource: true,
@@ -54,6 +68,14 @@ func App() {
 	bannerService := banner_service.NewBannerService(logger, bannerRepo)
 	bannerHandler := banners_transport.NewBunnersHandler(logger, bannerService, middleware)
 	bannerHandler.Register(router)
+
+	logger.Info("adding swagger documentation")
+	router.PathPrefix("/swagger/").Handler(httpSwagger.Handler(
+		httpSwagger.URL("http://localhost:8080/swagger/doc.json"),
+		httpSwagger.DeepLinking(true),
+		httpSwagger.DocExpansion("none"),
+		httpSwagger.DomID("swagger-ui"),
+	)).Methods(http.MethodGet)
 
 	host := fmt.Sprintf("%s:%s", cfg.Server.IP, cfg.Server.Port)
 	logger.Info("listen tcp", slog.String("host", host))

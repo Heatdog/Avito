@@ -30,14 +30,32 @@ func NewBunnersHandler(logger *slog.Logger, service banner_service.BannerService
 }
 
 const (
-	banner = "/banner"
+	banner     = "/banner"
+	userBanner = "/user_banner"
 )
 
 func (handler *bannersHandler) Register(router *mux.Router) {
 	router.HandleFunc(banner, handler.middleware.Auth(handler.middleware.AdminAuth(handler.createBanner))).
 		Methods(http.MethodPost)
+	router.HandleFunc(userBanner, handler.middleware.Auth(handler.getUserBanner)).
+		Methods(http.MethodGet)
 }
 
+// Создание нового баннера
+// @Summary CreateBanner
+// @Security ApiKeyAuth
+// @Description Создание нового баннера
+// @ID create-banner
+// @Tags banner
+// @Accept json
+// @Produce json
+// @Param input body banner_model.BannerInsert true "banner info"
+// @Success 201 {object} transport.RespWriterBannerCreated ID созданного баннера
+// @Failure 400 {object} transport.RespWriterError Некорректные данные
+// @Failure 401 {object} nil Пользователь не авторизован
+// @Failure 403 {object} nil Пользователь не имеет доступа
+// @Failure 500 {object} transport.RespWriterError Внутренняя ошибка сервера
+// @Router /banner [post]
 func (handler *bannersHandler) createBanner(w http.ResponseWriter, r *http.Request) {
 	handler.logger.Debug("create banner handler")
 
@@ -68,5 +86,17 @@ func (handler *bannersHandler) createBanner(w http.ResponseWriter, r *http.Reque
 		transport.ResponseWriteError(w, http.StatusBadRequest, err.Error(), handler.logger)
 		return
 	}
+
+	id, err := handler.service.InsertBanner(r.Context(), banner)
+	if err != nil {
+		handler.logger.Warn(err.Error())
+		transport.ResponseWriteError(w, http.StatusInternalServerError, err.Error(), handler.logger)
+		return
+	}
+
+	transport.ResponseWriteBannerCreated(w, id, handler.logger)
+}
+
+func (handler *bannersHandler) getUserBanner(w http.ResponseWriter, r *http.Request) {
 
 }
