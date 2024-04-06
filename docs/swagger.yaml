@@ -72,9 +72,54 @@ paths:
       summary: CreateBanner
       tags:
       - banner
+  /user_banner:
+    get:
+      description: Получение баннера для пользователя
+      operationId: get-user-banner
+      parameters:
+      - description: tag_id
+        in: query
+        name: tag_id
+        required: true
+        type: integer
+      - description: feature_id
+        in: query
+        name: feature_id
+        required: true
+        type: integer
+      - description: use_last_revision
+        in: query
+        name: use_last_revision
+        type: boolean
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/transport.RespWriterBannerCreated'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/transport.RespWriterError'
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "404":
+          description: Not Found
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/transport.RespWriterError'
+      security:
+      - ApiKeyAuth: []
+      summary: GetUserBanner
+      tags:
+      - banner
 securityDefinitions:
   ApiKeyAuth:
     in: header
-    name: Authorization
+    name: token
     type: apiKey
 swagger: "2.0"

@@ -8,6 +8,7 @@ import (
 	banner_model "github.com/Heatdog/Avito/internal/models/banner"
 	banner_repository "github.com/Heatdog/Avito/internal/repository/banner"
 	"github.com/Heatdog/Avito/pkg/client/postgre"
+	"github.com/jackc/pgx/v5"
 )
 
 type bannerRepository struct {
@@ -45,8 +46,8 @@ func (repo *bannerRepository) InsertBanner(ctx context.Context, banner banner_mo
 		return 0, err
 	}
 
-	for _, tag := range banner.TagsId {
-		if err = repo.insertCrossTable(ctx, tag, banner.FeatureId, id); err != nil {
+	for _, tag := range banner.TagsID {
+		if err = repo.insertCrossTable(ctx, tag, banner.FeatureID, id); err != nil {
 			repo.logger.Warn(err.Error())
 
 			if errTransaction := transaction.Rollback(ctx); errTransaction != nil {
@@ -104,4 +105,143 @@ func (repo *bannerRepository) insertCrossTable(ctx context.Context, tagId, feaut
 	}
 
 	return nil
+}
+
+func (repo *bannerRepository) GetUserBanner(ctx context.Context, params banner_model.BannerUserParams) (string, error) {
+	repo.logger.Debug("get user banner repository")
+
+	q := `
+		SELECT b.content
+		FROM banners b
+		JOIN features_tags_to_banners ftb ON ftb.banner_id = b.id
+		WHERE ftb.feature_id = $1 AND ftb.tag_id = $2
+	`
+	repo.logger.Debug("repo query", slog.String("query", q))
+	row := repo.dbClient.QueryRow(ctx, q, params.FeatureID, params.TagID)
+
+	var content string
+	if err := row.Scan(&content); err != nil {
+		repo.logger.Warn(err.Error())
+		return "", err
+	}
+
+	return content, nil
+}
+
+func (repo *bannerRepository) GetBanners(ctx context.Context, params banner_model.BannerParams) ([]banner_model.Banner,
+	error) {
+
+	repo.logger.Debug("get banners repository")
+	banners, err := repo.getOnlyBanners(ctx, params)
+	if err != nil {
+		repo.logger.Warn(err.Error())
+		return nil, err
+	}
+
+	for i, banner := range banners {
+		featureID, tagsID, err := repo.getTagsFeaturesForBanner(ctx, banner.ID)
+		if err != nil {
+			repo.logger.Warn(err.Error())
+			return nil, err
+		}
+		banners[i].FeatureID = featureID
+		banners[i].TagsID = tagsID
+	}
+
+	return banners, nil
+}
+
+func (repo *bannerRepository) getOnlyBanners(ctx context.Context, params banner_model.BannerParams) ([]banner_model.Banner,
+	error) {
+
+	var rows pgx.Rows
+	var err error
+	q := repo.makeQueryBanner(params)
+	if params.FeatureID != nil {
+		if params.TagID != nil {
+			rows, err = repo.dbClient.Query(ctx, q, &params.FeatureID, &params.TagID)
+		} else {
+			rows, err = repo.dbClient.Query(ctx, q, &params.FeatureID)
+		}
+	} else {
+		if params.TagID != nil {
+			rows, err = repo.dbClient.Query(ctx, q, &params.TagID)
+		} else {
+			rows, err = repo.dbClient.Query(ctx, q)
+		}
+	}
+
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var banners []banner_model.Banner
+	for rows.Next() {
+
+		var banner banner_model.Banner
+		if err = rows.Scan(&banner.ID, &banner.Content, &banner.IsActive, &banner.CreatedAt,
+			&banner.UpdatedAt); err != nil {
+
+			return nil, err
+		}
+
+		banners = append(banners, banner)
+	}
+	return banners, nil
+}
+
+func (repo *bannerRepository) makeQueryBanner(params banner_model.BannerParams) string {
+	q := `
+		SELECT b.id, b.content, b.is_active, b.created_at, b.updated_at
+		FROM banners b
+	`
+	if params.FeatureID != nil {
+		q += "JOIN features_tags_to_banners ftb ON ftb.feature_id = $1 AND ftb.banner_id = b.id"
+		if params.TagID != nil {
+			q += "AND ftb.tag_id = $2"
+		}
+	} else {
+		if params.TagID != nil {
+			q += "JOIN features_tags_to_banners ftb ON ftb.tag_id = $1 AND ftb.banner_id = b.id"
+		}
+	}
+
+	if params.Limit != nil {
+		q += fmt.Sprintf(` LIMIT %d`, *params.Limit)
+	}
+	if params.Offset != nil {
+		q += fmt.Sprintf(` OFFSET %d`, *params.Offset)
+	}
+
+	repo.logger.Debug("repo query", slog.String("query", q))
+	return q
+}
+
+func (repo *bannerRepository) getTagsFeaturesForBanner(ctx context.Context, bannerID int) (int, []int, error) {
+	q := `
+		SELECT feature_id, tag_id
+		FROM features_tags_to_banners
+		WHERE banner_id = $1
+	`
+	repo.logger.Debug("repo query", slog.String("query", q))
+	rows, err := repo.dbClient.Query(ctx, q, bannerID)
+	if err != nil {
+		return 0, nil, err
+	}
+	defer rows.Close()
+
+	var featurID int
+	var tagsID []int
+
+	for rows.Next() {
+		var tag int
+		if err = rows.Scan(&featurID, &tag); err != nil {
+			return 0, nil, err
+		}
+
+		tagsID = append(tagsID, tag)
+	}
+
+	return featurID, tagsID, nil
 }

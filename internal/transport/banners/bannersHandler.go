@@ -2,16 +2,19 @@ package banners_transport
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
+	"strconv"
 
 	banner_model "github.com/Heatdog/Avito/internal/models/banner"
 	banner_service "github.com/Heatdog/Avito/internal/service/banner"
 	"github.com/Heatdog/Avito/internal/transport"
 	middleware_transport "github.com/Heatdog/Avito/internal/transport/middleware"
-	"github.com/go-playground/validator"
+	"github.com/go-playground/validator/v10"
 	"github.com/gorilla/mux"
+	"github.com/jackc/pgx/v5"
 )
 
 type bannersHandler struct {
@@ -38,6 +41,8 @@ func (handler *bannersHandler) Register(router *mux.Router) {
 	router.HandleFunc(banner, handler.middleware.Auth(handler.middleware.AdminAuth(handler.createBanner))).
 		Methods(http.MethodPost)
 	router.HandleFunc(userBanner, handler.middleware.Auth(handler.getUserBanner)).
+		Methods(http.MethodGet)
+	router.HandleFunc(banner, handler.middleware.Auth(handler.middleware.AdminAuth(handler.getBanners))).
 		Methods(http.MethodGet)
 }
 
@@ -79,8 +84,8 @@ func (handler *bannersHandler) createBanner(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	handler.logger.Debug("validate request body")
-	validate := validator.New()
+	handler.logger.Debug("validate request body", slog.Any("banner", banner))
+	validate := validator.New(validator.WithRequiredStructEnabled())
 	if err = validate.Struct(banner); err != nil {
 		handler.logger.Warn(err.Error())
 		transport.ResponseWriteError(w, http.StatusBadRequest, err.Error(), handler.logger)
@@ -97,6 +102,161 @@ func (handler *bannersHandler) createBanner(w http.ResponseWriter, r *http.Reque
 	transport.ResponseWriteBannerCreated(w, id, handler.logger)
 }
 
+// Получение баннера для пользователя
+// @Summary GetUserBanner
+// @Security ApiKeyAuth
+// @Description Получение баннера для пользователя
+// @ID get-user-banner
+// @Tags banner
+// @Produce json
+// @Param tag_id query integer true "tag_id"
+// @Param feature_id query integer true "feature_id"
+// @Param use_last_revision query boolean false "use_last_revision"
+// @Success 200 {object} json JSON-отображение баннера
+// @Failure 400 {object} transport.RespWriterError Некорректные данные
+// @Failure 401 {object} nil Пользователь не авторизован
+// @Failure 403 {object} nil Пользователь не имеет доступа
+// @Failure 404 {object} nil Баннер не найден
+// @Failure 500 {object} transport.RespWriterError Внутренняя ошибка сервера
+// @Router /user_banner [get]
 func (handler *bannersHandler) getUserBanner(w http.ResponseWriter, r *http.Request) {
+	handler.logger.Debug("get user banner handler")
 
+	handler.logger.Debug("read request query paarams")
+	tagIdStr := r.URL.Query().Get("tag_id")
+	featureIdStr := r.URL.Query().Get("feature_id")
+	useLastRevisionStr := r.URL.Query().Get("use_last_revision")
+
+	params, err := handler.validateUserBannerParams(tagIdStr, featureIdStr, useLastRevisionStr)
+	if err != nil {
+		handler.logger.Warn(err.Error())
+		transport.ResponseWriteError(w, http.StatusBadRequest, err.Error(), handler.logger)
+		return
+	}
+
+	handler.logger.Debug("params", slog.Int("tag_id", params.TagID), slog.Int("feature_id", params.FeatureID),
+		slog.Bool("use_last_revision value", params.UseLastrRevision))
+
+	content, err := handler.service.GetUserBanner(r.Context(), params)
+	if err == pgx.ErrNoRows {
+		handler.logger.Debug(err.Error())
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+	if err != nil {
+		handler.logger.Warn(err.Error())
+		transport.ResponseWriteError(w, http.StatusInternalServerError, err.Error(), handler.logger)
+		return
+	}
+
+	handler.logger.Debug(content)
+	transport.ResponseWriteBanner(w, content, handler.logger)
+}
+
+func (handler *bannersHandler) validateUserBannerParams(tagIdStr, featureIdStr,
+	useLastRevisionStr string) (banner_model.BannerUserParams, error) {
+
+	tagId, err := strconv.Atoi(tagIdStr)
+	if err != nil {
+		return banner_model.BannerUserParams{}, err
+	}
+
+	featureId, err := strconv.Atoi(featureIdStr)
+	if err != nil {
+		return banner_model.BannerUserParams{}, err
+	}
+
+	useLastRevision := false
+	if useLastRevisionStr != "" {
+		switch useLastRevisionStr {
+		case "true":
+			useLastRevision = true
+		case "false":
+			useLastRevision = false
+		default:
+			err = fmt.Errorf("incorrect use_last_revision value")
+			return banner_model.BannerUserParams{}, err
+		}
+	}
+	return banner_model.BannerUserParams{
+		TagID:            tagId,
+		FeatureID:        featureId,
+		UseLastrRevision: useLastRevision,
+	}, nil
+}
+
+// Получение всех баннеров c фильтрацией по фиче и/или тегу
+// @Summary GetBanners
+// @Security ApiKeyAuth
+// @Description Получение всех баннеров c фильтрацией по фиче и/или тегу
+// @ID get-banner
+// @Tags banner
+// @Produce json
+// @Param tag_id query integer false "tag_id"
+// @Param feature_id query integer false "feature_id"
+// @Param limit query integer false "limit"
+// @Param offset query integer false "limit"
+// @Success 200 {object} []banner_model.Banner Список баннеров
+// @Failure 401 {object} nil Пользователь не авторизован
+// @Failure 403 {object} nil Пользователь не имеет доступа
+// @Failure 500 {object} transport.RespWriterError Внутренняя ошибка сервера
+// @Router /banner [post]
+func (handler *bannersHandler) getBanners(w http.ResponseWriter, r *http.Request) {
+	handler.logger.Debug("get banners handler")
+
+	handler.logger.Debug("read request query paarams")
+	tagIdStr := r.URL.Query().Get("tag_id")
+	featureIdStr := r.URL.Query().Get("feature_id")
+	limitStr := r.URL.Query().Get("limit")
+	offsetStr := r.URL.Query().Get("offset")
+
+	params, err := handler.validateBannersParams(tagIdStr, featureIdStr, limitStr, offsetStr)
+	if err != nil {
+		handler.logger.Warn(err.Error())
+		transport.ResponseWriteError(w, http.StatusBadRequest, err.Error(), handler.logger)
+		return
+	}
+
+	handler.logger.Debug("params", slog.Int("tag_id", *params.TagID), slog.Int("feature_id", *params.FeatureID),
+		slog.Int("limit", *params.Limit), slog.Int("offset", *params.Offset))
+
+}
+
+func (handler *bannersHandler) validateBannersParams(tagStr, featureStr, limitStr,
+	offsetStr string) (banner_model.BannerParams, error) {
+
+	res := banner_model.BannerParams{}
+	if tagStr != "" {
+		tag, err := strconv.Atoi(tagStr)
+		if err != nil {
+			return banner_model.BannerParams{}, err
+		}
+		res.TagID = &tag
+	}
+
+	if featureStr != "" {
+		featureId, err := strconv.Atoi(featureStr)
+		if err != nil {
+			return banner_model.BannerParams{}, err
+		}
+		res.FeatureID = &featureId
+	}
+
+	if limitStr != "" {
+		limit, err := strconv.Atoi(featureStr)
+		if err != nil {
+			return banner_model.BannerParams{}, err
+		}
+		res.Limit = &limit
+	}
+
+	if offsetStr != "" {
+		offset, err := strconv.Atoi(offsetStr)
+		if err != nil {
+			return banner_model.BannerParams{}, err
+		}
+		res.Offset = &offset
+	}
+
+	return res, nil
 }

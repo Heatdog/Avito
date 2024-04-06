@@ -5,13 +5,15 @@ CREATE TABLE IF NOT EXISTS tags(
 
 CREATE TABLE IF NOT EXISTS features(
     id SERIAL PRIMARY KEY,
-    name VARCHAR(255)
+    name VARCHAR(255) UNIQUE
 );
 
 CREATE TABLE IF NOT EXISTS banners(
     id SERIAL PRIMARY KEY,
     content json NOT NULL,
-    is_active BOOLEAN DEFAULT true
+    is_active BOOLEAN DEFAULT true,
+    created_at DATE DEFAULT now(),
+    updated_at DATE DEFAULT now()
 );
 
 CREATE TABLE IF NOT EXISTS features_tags_to_banners(

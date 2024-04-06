@@ -10,6 +10,8 @@ import (
 
 type BannerService interface {
 	InsertBanner(context context.Context, banner banner_model.BannerInsert) (int, error)
+	GetUserBanner(context context.Context, params banner_model.BannerUserParams) (string, error)
+	GetBanners(context context.Context, params banner_model.BannerParams) ([]banner_model.Banner, error)
 }
 
 type bannerService struct {
@@ -28,4 +30,17 @@ func (service *bannerService) InsertBanner(context context.Context, banner banne
 	service.logger.Debug("insert banner serivce")
 
 	return service.repo.InsertBanner(context, banner)
+}
+
+func (service *bannerService) GetUserBanner(context context.Context, params banner_model.BannerUserParams) (string, error) {
+	service.logger.Debug("get user banner service")
+
+	return service.repo.GetUserBanner(context, params)
+}
+
+func (service *bannerService) GetBanners(context context.Context, params banner_model.BannerParams) ([]banner_model.Banner,
+	error) {
+
+	service.logger.Debug("get banners")
+	return service.repo.GetBanners(context, params)
 }

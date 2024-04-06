@@ -30,7 +30,7 @@ import (
 
 // @securityDefinitions.apiKey ApiKeyAuth
 // @in header
-// @name Authorization
+// @name token
 func App() {
 	opt := &slog.HandlerOptions{
 		AddSource: true,
@@ -55,7 +55,6 @@ func App() {
 	logger.Info("init db")
 	if err = migrations.InitDb(dbClient); err != nil {
 		logger.Error(err.Error())
-		panic(err)
 	}
 
 	router := mux.NewRouter()
@@ -70,14 +69,14 @@ func App() {
 	bannerHandler.Register(router)
 
 	logger.Info("adding swagger documentation")
+	host := fmt.Sprintf("%s:%s", cfg.Server.IP, cfg.Server.Port)
 	router.PathPrefix("/swagger/").Handler(httpSwagger.Handler(
-		httpSwagger.URL("http://localhost:8080/swagger/doc.json"),
+		httpSwagger.URL(fmt.Sprintf("http://%s/swagger/doc.json", host)),
 		httpSwagger.DeepLinking(true),
 		httpSwagger.DocExpansion("none"),
 		httpSwagger.DomID("swagger-ui"),
 	)).Methods(http.MethodGet)
 
-	host := fmt.Sprintf("%s:%s", cfg.Server.IP, cfg.Server.Port)
 	logger.Info("listen tcp", slog.String("host", host))
 
 	if err := http.ListenAndServe(host, router); err != nil {

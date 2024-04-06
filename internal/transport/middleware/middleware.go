@@ -33,6 +33,12 @@ func (mid *Middleware) Auth(next http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 
+		if !mid.verifyToken(token) {
+			mid.logger.Debug("token incorrect")
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+
 		ctx := context.WithValue(r.Context(), "token", token)
 		next(w, r.WithContext(ctx))
 	}
@@ -56,4 +62,8 @@ func (mid *Middleware) AdminAuth(next http.HandlerFunc) http.HandlerFunc {
 
 		next(w, r)
 	}
+}
+
+func (mid *Middleware) verifyToken(token string) bool {
+	return token == userToken || token == adminToken
 }
