@@ -8,6 +8,7 @@ import (
 	"github.com/Heatdog/Avito/internal/models/query_params"
 	banner_repository "github.com/Heatdog/Avito/internal/repository/banner"
 	"github.com/Heatdog/Avito/pkg/cache"
+	"github.com/Heatdog/Avito/pkg/token"
 	"github.com/jackc/pgx/v5"
 )
 
@@ -18,17 +19,19 @@ type BannerService interface {
 }
 
 type bannerService struct {
-	logger *slog.Logger
-	repo   banner_repository.BannerRepository
-	cache  cache.Cache[banner_model.CacheKey, *banner_model.Banner]
+	logger        *slog.Logger
+	repo          banner_repository.BannerRepository
+	cache         cache.Cache[banner_model.CacheKey, *banner_model.Banner]
+	tokenProvider token.TokenProvider
 }
 
 func NewBannerService(logger *slog.Logger, repo banner_repository.BannerRepository,
-	cache cache.Cache[banner_model.CacheKey, *banner_model.Banner]) BannerService {
+	cache cache.Cache[banner_model.CacheKey, *banner_model.Banner], tokenProvider token.TokenProvider) BannerService {
 	return &bannerService{
-		logger: logger,
-		repo:   repo,
-		cache:  cache,
+		logger:        logger,
+		repo:          repo,
+		cache:         cache,
+		tokenProvider: tokenProvider,
 	}
 }
 
@@ -49,7 +52,7 @@ func (service *bannerService) GetUserBanner(context context.Context,
 			FeatureID: params.FeatureID,
 		})
 		if ok {
-			if !banner.IsActive {
+			if !banner.IsActive && !service.tokenProvider.VerifyOnAdmin(params.Token) {
 				return "", pgx.ErrNoRows
 			}
 			return banner.Content, nil
@@ -60,7 +63,7 @@ func (service *bannerService) GetUserBanner(context context.Context,
 	if err != nil {
 		return "", err
 	}
-	if !banner.IsActive {
+	if !banner.IsActive && !service.tokenProvider.VerifyOnAdmin(params.Token) {
 		return "", pgx.ErrNoRows
 	}
 	go service.cache.Add(banner_model.CacheKey{

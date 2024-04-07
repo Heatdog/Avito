@@ -123,10 +123,13 @@ func (handler *bannersHandler) createBanner(w http.ResponseWriter, r *http.Reque
 func (handler *bannersHandler) getUserBanner(w http.ResponseWriter, r *http.Request) {
 	handler.logger.Debug("get user banner handler")
 
-	handler.logger.Debug("read request query paarams")
+	handler.logger.Debug("read request query params")
 	tagIdStr := r.URL.Query().Get("tag_id")
 	featureIdStr := r.URL.Query().Get("feature_id")
 	useLastRevisionStr := r.URL.Query().Get("use_last_revision")
+
+	token := r.Context().Value("token").(string)
+	handler.logger.Debug("token header", slog.String("token", token))
 
 	params, err := query_params.ValidateUserBannerParams(tagIdStr, featureIdStr, useLastRevisionStr)
 	if err != nil {
@@ -134,9 +137,10 @@ func (handler *bannersHandler) getUserBanner(w http.ResponseWriter, r *http.Requ
 		transport.ResponseWriteError(w, http.StatusBadRequest, err.Error(), handler.logger)
 		return
 	}
+	params.Token = token
 
 	handler.logger.Debug("params", slog.Int("tag_id", params.TagID), slog.Int("feature_id", params.FeatureID),
-		slog.Bool("use_last_revision value", params.UseLastrRevision))
+		slog.Bool("use_last_revision value", params.UseLastrRevision), slog.String("token", params.Token))
 
 	content, err := handler.service.GetUserBanner(r.Context(), params)
 	if err == pgx.ErrNoRows {

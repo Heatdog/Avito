@@ -19,6 +19,7 @@ import (
 	middleware_transport "github.com/Heatdog/Avito/internal/transport/middleware"
 	hashicorp_lru "github.com/Heatdog/Avito/pkg/cache/hashi_corp"
 	"github.com/Heatdog/Avito/pkg/client/postgre"
+	"github.com/Heatdog/Avito/pkg/token/simple_token"
 	"github.com/gorilla/mux"
 	"github.com/hashicorp/golang-lru/v2/expirable"
 	httpSwagger "github.com/swaggo/http-swagger/v2"
@@ -68,12 +69,14 @@ func App() {
 
 	router := mux.NewRouter()
 
+	tokenProvider := simple_token.NewSimpleTokenProvider()
+
 	logger.Debug("register middlewre")
-	middleware := middleware_transport.NewMiddleware(logger)
+	middleware := middleware_transport.NewMiddleware(logger, tokenProvider)
 
 	logger.Debug("register banners handler")
 	bannerRepo := banner_postgre.NewBannerRepository(logger, dbClient)
-	bannerService := banner_service.NewBannerService(logger, bannerRepo, cache)
+	bannerService := banner_service.NewBannerService(logger, bannerRepo, cache, tokenProvider)
 	bannerHandler := banners_transport.NewBunnersHandler(logger, bannerService, middleware)
 	bannerHandler.Register(router)
 

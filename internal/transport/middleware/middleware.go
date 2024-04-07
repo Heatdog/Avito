@@ -4,22 +4,21 @@ import (
 	"context"
 	"log/slog"
 	"net/http"
+
+	"github.com/Heatdog/Avito/pkg/token"
 )
 
 type Middleware struct {
-	logger *slog.Logger
+	logger        *slog.Logger
+	tokenProvider token.TokenProvider
 }
 
-func NewMiddleware(logger *slog.Logger) *Middleware {
+func NewMiddleware(logger *slog.Logger, tokenProvider token.TokenProvider) *Middleware {
 	return &Middleware{
-		logger: logger,
+		logger:        logger,
+		tokenProvider: tokenProvider,
 	}
 }
-
-const (
-	userToken  = "user_token"
-	adminToken = "admin_token"
-)
 
 func (mid *Middleware) Auth(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -33,7 +32,7 @@ func (mid *Middleware) Auth(next http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 
-		if !mid.verifyToken(token) {
+		if !mid.tokenProvider.VerifyToken(token) {
 			mid.logger.Debug("token incorrect")
 			w.WriteHeader(http.StatusUnauthorized)
 			return
@@ -54,7 +53,7 @@ func (mid *Middleware) AdminAuth(next http.HandlerFunc) http.HandlerFunc {
 		}
 
 		mid.logger.Debug("token", token)
-		if token.(string) != adminToken {
+		if !mid.tokenProvider.VerifyOnAdmin(token.(string)) {
 			mid.logger.Debug("not admin token")
 			w.WriteHeader(http.StatusForbidden)
 			return
@@ -62,8 +61,4 @@ func (mid *Middleware) AdminAuth(next http.HandlerFunc) http.HandlerFunc {
 
 		next(w, r)
 	}
-}
-
-func (mid *Middleware) verifyToken(token string) bool {
-	return token == userToken || token == adminToken
 }

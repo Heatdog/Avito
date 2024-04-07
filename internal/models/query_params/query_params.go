@@ -9,6 +9,7 @@ type BannerUserParams struct {
 	TagID            int
 	FeatureID        int
 	UseLastrRevision bool
+	Token            string
 }
 
 func ValidateUserBannerParams(tagIdStr, featureIdStr,
