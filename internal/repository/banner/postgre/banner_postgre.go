@@ -6,17 +6,18 @@ import (
 	"log/slog"
 
 	banner_model "github.com/Heatdog/Avito/internal/models/banner"
+	"github.com/Heatdog/Avito/internal/models/query_params"
 	banner_repository "github.com/Heatdog/Avito/internal/repository/banner"
-	"github.com/Heatdog/Avito/pkg/client/postgre"
+	"github.com/Heatdog/Avito/pkg/client"
 	"github.com/jackc/pgx/v5"
 )
 
 type bannerRepository struct {
 	logger   *slog.Logger
-	dbClient postgre.Client
+	dbClient client.Client
 }
 
-func NewBannerRepository(logger *slog.Logger, dbClient postgre.Client) banner_repository.BannerRepository {
+func NewBannerRepository(logger *slog.Logger, dbClient client.Client) banner_repository.BannerRepository {
 	return &bannerRepository{
 		logger:   logger,
 		dbClient: dbClient,
@@ -103,29 +104,28 @@ func (repo *bannerRepository) insertCrossTable(ctx context.Context, transaction 
 	return nil
 }
 
-func (repo *bannerRepository) GetUserBanner(ctx context.Context, params banner_model.BannerUserParams) (string, bool, error) {
+func (repo *bannerRepository) GetUserBanner(ctx context.Context, tagID, feautureID int) (banner_model.Banner, error) {
 	repo.logger.Debug("get user banner repository")
 
 	q := `
-		SELECT b.content, b.is_active
+		SELECT b.id, b.content, b.is_active
 		FROM banners b
 		JOIN features_tags_to_banners ftb ON ftb.banner_id = b.id
 		WHERE ftb.feature_id = $1 AND ftb.tag_id = $2
 	`
 	repo.logger.Debug("repo query", slog.String("query", q))
-	row := repo.dbClient.QueryRow(ctx, q, params.FeatureID, params.TagID)
+	row := repo.dbClient.QueryRow(ctx, q, feautureID, tagID)
 
-	var content string
-	var isActive bool
-	if err := row.Scan(&content, &isActive); err != nil {
+	var banner banner_model.Banner
+	if err := row.Scan(&banner.ID, &banner.Content, &banner.IsActive); err != nil {
 		repo.logger.Warn(err.Error())
-		return "", false, err
+		return banner_model.Banner{}, err
 	}
 
-	return content, isActive, nil
+	return banner, nil
 }
 
-func (repo *bannerRepository) GetBanners(ctx context.Context, params banner_model.BannerParams) ([]banner_model.Banner,
+func (repo *bannerRepository) GetBanners(ctx context.Context, params query_params.BannerParams) ([]banner_model.Banner,
 	error) {
 
 	repo.logger.Debug("get banners repository")
@@ -148,7 +148,7 @@ func (repo *bannerRepository) GetBanners(ctx context.Context, params banner_mode
 	return banners, nil
 }
 
-func (repo *bannerRepository) getOnlyBanners(ctx context.Context, params banner_model.BannerParams) ([]banner_model.Banner,
+func (repo *bannerRepository) getOnlyBanners(ctx context.Context, params query_params.BannerParams) ([]banner_model.Banner,
 	error) {
 
 	var rows pgx.Rows
@@ -188,7 +188,7 @@ func (repo *bannerRepository) getOnlyBanners(ctx context.Context, params banner_
 	return banners, nil
 }
 
-func (repo *bannerRepository) makeQueryBanner(params banner_model.BannerParams) string {
+func (repo *bannerRepository) makeQueryBanner(params query_params.BannerParams) string {
 	q := `
 		SELECT b.id, b.content, b.is_active, b.created_at, b.updated_at
 		FROM banners b
@@ -203,6 +203,7 @@ func (repo *bannerRepository) makeQueryBanner(params banner_model.BannerParams) 
 			q += "JOIN features_tags_to_banners ftb ON ftb.tag_id = $1 AND ftb.banner_id = b.id"
 		}
 	}
+	q += " ORDER BY b.updated_at"
 
 	if params.Limit != nil {
 		q += fmt.Sprintf(` LIMIT %d`, *params.Limit)

@@ -2,13 +2,12 @@ package banners_transport
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
-	"strconv"
 
 	banner_model "github.com/Heatdog/Avito/internal/models/banner"
+	"github.com/Heatdog/Avito/internal/models/query_params"
 	banner_service "github.com/Heatdog/Avito/internal/service/banner"
 	"github.com/Heatdog/Avito/internal/transport"
 	middleware_transport "github.com/Heatdog/Avito/internal/transport/middleware"
@@ -129,7 +128,7 @@ func (handler *bannersHandler) getUserBanner(w http.ResponseWriter, r *http.Requ
 	featureIdStr := r.URL.Query().Get("feature_id")
 	useLastRevisionStr := r.URL.Query().Get("use_last_revision")
 
-	params, err := handler.validateUserBannerParams(tagIdStr, featureIdStr, useLastRevisionStr)
+	params, err := query_params.ValidateUserBannerParams(tagIdStr, featureIdStr, useLastRevisionStr)
 	if err != nil {
 		handler.logger.Debug(err.Error())
 		transport.ResponseWriteError(w, http.StatusBadRequest, err.Error(), handler.logger)
@@ -151,40 +150,21 @@ func (handler *bannersHandler) getUserBanner(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	handler.logger.Debug(content)
-	transport.ResponseWriteBanner(w, content, handler.logger)
-}
-
-func (handler *bannersHandler) validateUserBannerParams(tagIdStr, featureIdStr,
-	useLastRevisionStr string) (banner_model.BannerUserParams, error) {
-
-	tagId, err := strconv.Atoi(tagIdStr)
+	resp, err := json.Marshal(content)
 	if err != nil {
-		return banner_model.BannerUserParams{}, err
+		handler.logger.Warn(err.Error())
+		transport.ResponseWriteError(w, http.StatusInternalServerError, err.Error(), handler.logger)
+		return
 	}
 
-	featureId, err := strconv.Atoi(featureIdStr)
-	if err != nil {
-		return banner_model.BannerUserParams{}, err
+	w.WriteHeader(http.StatusOK)
+	w.Header().Add("content-type", "application/json")
+	if _, err = w.Write(resp); err != nil {
+		handler.logger.Warn(err.Error())
+		transport.ResponseWriteError(w, http.StatusInternalServerError, err.Error(), handler.logger)
+		return
 	}
-
-	useLastRevision := false
-	if useLastRevisionStr != "" {
-		switch useLastRevisionStr {
-		case "true":
-			useLastRevision = true
-		case "false":
-			useLastRevision = false
-		default:
-			err = fmt.Errorf("incorrect use_last_revision value")
-			return banner_model.BannerUserParams{}, err
-		}
-	}
-	return banner_model.BannerUserParams{
-		TagID:            tagId,
-		FeatureID:        featureId,
-		UseLastrRevision: useLastRevision,
-	}, nil
+	handler.logger.Debug(string(resp))
 }
 
 // Получение всех баннеров c фильтрацией по фиче и/или тегу
@@ -212,7 +192,7 @@ func (handler *bannersHandler) getBanners(w http.ResponseWriter, r *http.Request
 	limitStr := r.URL.Query().Get("limit")
 	offsetStr := r.URL.Query().Get("offset")
 
-	params, err := handler.validateBannersParams(tagIdStr, featureIdStr, limitStr, offsetStr)
+	params, err := query_params.ValidateBannersParams(tagIdStr, featureIdStr, limitStr, offsetStr)
 	if err != nil {
 		handler.logger.Debug(err.Error())
 		transport.ResponseWriteError(w, http.StatusBadRequest, err.Error(), handler.logger)
@@ -237,45 +217,10 @@ func (handler *bannersHandler) getBanners(w http.ResponseWriter, r *http.Request
 
 	w.WriteHeader(http.StatusOK)
 	w.Header().Add("content-type", "application/json")
-	w.Write(resp)
+	if _, err = w.Write(resp); err != nil {
+		handler.logger.Warn(err.Error())
+		transport.ResponseWriteError(w, http.StatusInternalServerError, err.Error(), handler.logger)
+		return
+	}
 	handler.logger.Debug(string(resp))
-}
-
-func (handler *bannersHandler) validateBannersParams(tagStr, featureStr, limitStr,
-	offsetStr string) (banner_model.BannerParams, error) {
-
-	res := banner_model.BannerParams{}
-	if tagStr != "" {
-		tag, err := strconv.Atoi(tagStr)
-		if err != nil {
-			return banner_model.BannerParams{}, err
-		}
-		res.TagID = &tag
-	}
-
-	if featureStr != "" {
-		featureId, err := strconv.Atoi(featureStr)
-		if err != nil {
-			return banner_model.BannerParams{}, err
-		}
-		res.FeatureID = &featureId
-	}
-
-	if limitStr != "" {
-		limit, err := strconv.Atoi(limitStr)
-		if err != nil {
-			return banner_model.BannerParams{}, err
-		}
-		res.Limit = &limit
-	}
-
-	if offsetStr != "" {
-		offset, err := strconv.Atoi(offsetStr)
-		if err != nil {
-			return banner_model.BannerParams{}, err
-		}
-		res.Offset = &offset
-	}
-
-	return res, nil
 }

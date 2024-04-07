@@ -55,13 +55,3 @@ func ResponseWriteBannerCreated(w http.ResponseWriter, id int, logger *slog.Logg
 
 	logger.Debug("response banner created", slog.Int("id", id))
 }
-
-func ResponseWriteBanner(w http.ResponseWriter, content string, logger *slog.Logger) {
-	w.WriteHeader(http.StatusOK)
-	w.Header().Add("content-type", "application/json")
-
-	if _, err := w.Write([]byte(content)); err != nil {
-		logger.Error(err.Error())
-		return
-	}
-}

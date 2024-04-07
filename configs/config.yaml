@@ -11,3 +11,7 @@ postgre_settings:
   password: 123
 
 password_key: 123
+
+cache_settings:
+  size: 0
+  ttl: 0

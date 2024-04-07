@@ -21,16 +21,10 @@ func ValidateJson(fl validator.FieldLevel) bool {
 }
 
 type BannerInsert struct {
-	TagsID    []int       `json:"tag_id,omitempty" validate:"required,min=1,dive,numeric,required"`
-	FeatureID int         `json:"feature_id,omitempty" validate:"numeric,required"`
+	TagsID    []int       `json:"tag_id,omitempty" validate:"required,min=1,dive,numeric"`
+	FeatureID int         `json:"feature_id,omitempty" validate:"numeric"`
 	Content   interface{} `json:"content,omitempty" validate:"json,required" swaggertype:"object"`
-	IsActive  bool        `json:"is_active,omitempty" validate:"boolean,required"`
-}
-
-type BannerUserParams struct {
-	TagID            int
-	FeatureID        int
-	UseLastrRevision bool
+	IsActive  bool        `json:"is_active,omitempty" validate:"boolean"`
 }
 
 type Banner struct {
@@ -43,9 +37,7 @@ type Banner struct {
 	UpdatedAt time.Time   `json:"updated_at"`
 }
 
-type BannerParams struct {
-	TagID     *int
-	FeatureID *int
-	Limit     *int
-	Offset    *int
+type CacheKey struct {
+	TagID     int
+	FeatureID int
 }

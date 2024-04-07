@@ -6,17 +6,21 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"time"
 
 	_ "github.com/Heatdog/Avito/docs"
 
 	"github.com/Heatdog/Avito/internal/config"
 	"github.com/Heatdog/Avito/internal/migrations"
+	banner_model "github.com/Heatdog/Avito/internal/models/banner"
 	banner_postgre "github.com/Heatdog/Avito/internal/repository/banner/postgre"
 	banner_service "github.com/Heatdog/Avito/internal/service/banner"
 	banners_transport "github.com/Heatdog/Avito/internal/transport/banners"
 	middleware_transport "github.com/Heatdog/Avito/internal/transport/middleware"
+	hashicorp_lru "github.com/Heatdog/Avito/pkg/cache/hashi_corp"
 	"github.com/Heatdog/Avito/pkg/client/postgre"
 	"github.com/gorilla/mux"
+	"github.com/hashicorp/golang-lru/v2/expirable"
 	httpSwagger "github.com/swaggo/http-swagger/v2"
 )
 
@@ -57,6 +61,11 @@ func App() {
 		logger.Error(err.Error())
 	}
 
+	logger.Info("init cache")
+	hashiCorp := expirable.NewLRU[banner_model.CacheKey, *banner_model.Banner](cfg.Cache.Size, nil,
+		time.Duration(cfg.Cache.TTL))
+	cache := hashicorp_lru.NewLRU[banner_model.CacheKey, *banner_model.Banner](logger, hashiCorp)
+
 	router := mux.NewRouter()
 
 	logger.Debug("register middlewre")
@@ -64,14 +73,14 @@ func App() {
 
 	logger.Debug("register banners handler")
 	bannerRepo := banner_postgre.NewBannerRepository(logger, dbClient)
-	bannerService := banner_service.NewBannerService(logger, bannerRepo)
+	bannerService := banner_service.NewBannerService(logger, bannerRepo, cache)
 	bannerHandler := banners_transport.NewBunnersHandler(logger, bannerService, middleware)
 	bannerHandler.Register(router)
 
 	logger.Info("adding swagger documentation")
-	host := fmt.Sprintf("%s:%s", cfg.Server.IP, cfg.Server.Port)
+	host := fmt.Sprintf("%s:%d", cfg.Server.IP, cfg.Server.Port)
 	router.PathPrefix("/swagger/").Handler(httpSwagger.Handler(
-		httpSwagger.URL(fmt.Sprintf("http://localhost:%s/swagger/doc.json", cfg.Server.Port)),
+		httpSwagger.URL(fmt.Sprintf("http://localhost:%d/swagger/doc.json", cfg.Server.Port)),
 		httpSwagger.DeepLinking(true),
 		httpSwagger.DocExpansion("none"),
 		httpSwagger.DomID("swagger-ui"),

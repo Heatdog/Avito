@@ -3,10 +3,10 @@ package migrations
 import (
 	"context"
 
-	"github.com/Heatdog/Avito/pkg/client/postgre"
+	"github.com/Heatdog/Avito/pkg/client"
 )
 
-func initTags(client postgre.Client) error {
+func initTags(client client.Client) error {
 	tags := []struct {
 		name string
 	}{
@@ -38,7 +38,7 @@ func initTags(client postgre.Client) error {
 	return nil
 }
 
-func initFeatures(client postgre.Client) error {
+func initFeatures(client client.Client) error {
 	features := []struct {
 		name string
 	}{
@@ -69,7 +69,7 @@ func initFeatures(client postgre.Client) error {
 	return nil
 }
 
-func InitDb(client postgre.Client) error {
+func InitDb(client client.Client) error {
 	if err := initTags(client); err != nil {
 		return err
 	}

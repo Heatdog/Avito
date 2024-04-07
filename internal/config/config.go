@@ -7,22 +7,28 @@ import (
 )
 
 type ConfigStorage struct {
-	Server      ServerListen   `mapstructure:"server_listen"`
-	Postgre     PostgreStorage `mapstructure:"postgre_settings"`
-	PasswordKey string         `mapstructure:"password_key"`
+	Server      ServerListen    `mapstructure:"server_listen"`
+	Postgre     PostgreSettings `mapstructure:"postgre_settings"`
+	Cache       CacheSettings   `mapstructure:"cache_settings"`
+	PasswordKey string          `mapstructure:"password_key"`
 }
 
 type ServerListen struct {
 	IP   string `mapstructure:"ip"`
-	Port string `mapstructure:"port"`
+	Port int    `mapstructure:"port"`
 }
 
-type PostgreStorage struct {
+type PostgreSettings struct {
 	Host     string `mapstructure:"host"`
-	Port     string `mapstructure:"port"`
+	Port     int    `mapstructure:"port"`
 	Database string `mapstructure:"database"`
 	Username string `mapstructure:"username"`
 	Password string `mapstructure:"password"`
+}
+
+type CacheSettings struct {
+	Size int `mapstructure:"host"`
+	TTL  int `mapstructure:"ttl"`
 }
 
 func NewConfigStorage(logger *slog.Logger) *ConfigStorage {
