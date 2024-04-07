@@ -31,3 +31,8 @@ func (lru LRU[K, V]) Add(key K, value V) bool {
 	evicated := lru.cash.Add(key, value)
 	return evicated
 }
+
+func (lru LRU[K, V]) Remove(key K) bool {
+	lru.logger.Debug("delete", slog.Any("key", key))
+	return lru.cash.Remove(key)
+}

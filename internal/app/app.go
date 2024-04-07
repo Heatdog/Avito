@@ -63,9 +63,9 @@ func App() {
 	}
 
 	logger.Info("init cache")
-	hashiCorp := expirable.NewLRU[banner_model.CacheKey, *banner_model.Banner](cfg.Cache.Size, nil,
+	hashiCorp := expirable.NewLRU[banner_model.BannerKey, *banner_model.Banner](cfg.Cache.Size, nil,
 		time.Duration(cfg.Cache.TTL))
-	cache := hashicorp_lru.NewLRU[banner_model.CacheKey, *banner_model.Banner](logger, hashiCorp)
+	cache := hashicorp_lru.NewLRU[banner_model.BannerKey, *banner_model.Banner](logger, hashiCorp)
 
 	router := mux.NewRouter()
 

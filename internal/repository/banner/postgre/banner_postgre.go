@@ -136,13 +136,13 @@ func (repo *bannerRepository) GetBanners(ctx context.Context, params query_param
 	}
 
 	for i, banner := range banners {
-		featureID, tagsID, err := repo.getTagsFeaturesForBanner(ctx, banner.ID)
+		bannerParams, err := repo.GetBannerParams(ctx, banner.ID)
 		if err != nil {
 			repo.logger.Warn(err.Error())
 			return nil, err
 		}
-		banners[i].FeatureID = featureID
-		banners[i].TagsID = tagsID
+		banners[i].FeatureID = bannerParams.FeatureID
+		banners[i].TagsID = bannerParams.TagIDs
 	}
 
 	return banners, nil
@@ -216,7 +216,8 @@ func (repo *bannerRepository) makeQueryBanner(params query_params.BannerParams) 
 	return q
 }
 
-func (repo *bannerRepository) getTagsFeaturesForBanner(ctx context.Context, bannerID int) (int, []int, error) {
+func (repo *bannerRepository) GetBannerParams(ctx context.Context, bannerID int) (banner_model.BannerParams,
+	error) {
 	q := `
 		SELECT feature_id, tag_id
 		FROM features_tags_to_banners
@@ -225,21 +226,39 @@ func (repo *bannerRepository) getTagsFeaturesForBanner(ctx context.Context, bann
 	repo.logger.Debug("repo query", slog.String("query", q))
 	rows, err := repo.dbClient.Query(ctx, q, bannerID)
 	if err != nil {
-		return 0, nil, err
+		return banner_model.BannerParams{}, err
 	}
 	defer rows.Close()
 
-	var featurID int
-	var tagsID []int
+	var banerKeys banner_model.BannerParams
 
 	for rows.Next() {
-		var tag int
-		if err = rows.Scan(&featurID, &tag); err != nil {
-			return 0, nil, err
+		var tagID int
+		if err = rows.Scan(&banerKeys.FeatureID, &tagID); err != nil {
+			return banner_model.BannerParams{}, err
 		}
 
-		tagsID = append(tagsID, tag)
+		banerKeys.TagIDs = append(banerKeys.TagIDs, tagID)
 	}
 
-	return featurID, tagsID, nil
+	return banerKeys, nil
+}
+
+func (repo *bannerRepository) DeleteBanner(ctx context.Context, id int) (bool, error) {
+	q := `
+		DELETE FROM banners
+		WHERE id = $1
+	`
+	repo.logger.Debug("repo query", slog.String("query", q))
+
+	tag, err := repo.dbClient.Exec(ctx, q, id)
+	if err != nil {
+		repo.logger.Warn(err.Error())
+		return false, err
+	}
+
+	if tag.RowsAffected() < 1 {
+		return false, nil
+	}
+	return true, nil
 }

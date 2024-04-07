@@ -8,4 +8,5 @@ type CacheKey struct {
 type Cache[K comparable, V any] interface {
 	Get(key K) (value V, ok bool)
 	Add(key K, value V) (evicated bool)
+	Remove(key K) bool
 }

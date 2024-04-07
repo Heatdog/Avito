@@ -16,17 +16,18 @@ type BannerService interface {
 	InsertBanner(context context.Context, banner banner_model.BannerInsert) (int, error)
 	GetUserBanner(context context.Context, params query_params.BannerUserParams) (interface{}, error)
 	GetBanners(context context.Context, params query_params.BannerParams) ([]banner_model.Banner, error)
+	DeleteBanner(context context.Context, id int) (bool, error)
 }
 
 type bannerService struct {
 	logger        *slog.Logger
 	repo          banner_repository.BannerRepository
-	cache         cache.Cache[banner_model.CacheKey, *banner_model.Banner]
+	cache         cache.Cache[banner_model.BannerKey, *banner_model.Banner]
 	tokenProvider token.TokenProvider
 }
 
 func NewBannerService(logger *slog.Logger, repo banner_repository.BannerRepository,
-	cache cache.Cache[banner_model.CacheKey, *banner_model.Banner], tokenProvider token.TokenProvider) BannerService {
+	cache cache.Cache[banner_model.BannerKey, *banner_model.Banner], tokenProvider token.TokenProvider) BannerService {
 	return &bannerService{
 		logger:        logger,
 		repo:          repo,
@@ -47,7 +48,7 @@ func (service *bannerService) GetUserBanner(context context.Context,
 	service.logger.Debug("get user banner service")
 
 	if !params.UseLastrRevision {
-		banner, ok := service.cache.Get(banner_model.CacheKey{
+		banner, ok := service.cache.Get(banner_model.BannerKey{
 			TagID:     params.TagID,
 			FeatureID: params.FeatureID,
 		})
@@ -66,7 +67,7 @@ func (service *bannerService) GetUserBanner(context context.Context,
 	if !banner.IsActive && !service.tokenProvider.VerifyOnAdmin(params.Token) {
 		return "", pgx.ErrNoRows
 	}
-	go service.cache.Add(banner_model.CacheKey{
+	go service.cache.Add(banner_model.BannerKey{
 		TagID:     params.TagID,
 		FeatureID: params.FeatureID,
 	}, &banner)
@@ -79,4 +80,30 @@ func (service *bannerService) GetBanners(context context.Context, params query_p
 
 	service.logger.Debug("get banners")
 	return service.repo.GetBanners(context, params)
+}
+
+func (service *bannerService) DeleteBanner(context context.Context, id int) (bool, error) {
+	service.logger.Debug("delete banner", slog.Int("id", id))
+
+	params, err := service.repo.GetBannerParams(context, id)
+	if err != nil {
+		return false, err
+	}
+
+	ok, err := service.repo.DeleteBanner(context, id)
+	if err != nil {
+		return false, err
+	}
+	if !ok {
+		return false, nil
+	}
+
+	for _, tagID := range params.TagIDs {
+		service.cache.Remove(banner_model.BannerKey{
+			FeatureID: params.FeatureID,
+			TagID:     tagID,
+		})
+	}
+
+	return true, nil
 }

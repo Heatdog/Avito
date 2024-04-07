@@ -11,4 +11,6 @@ type BannerRepository interface {
 	InsertBanner(ctx context.Context, banner banner_model.BannerInsert) (int, error)
 	GetUserBanner(ctx context.Context, tagID, feautureID int) (banner_model.Banner, error)
 	GetBanners(ctx context.Context, params query_params.BannerParams) ([]banner_model.Banner, error)
+	GetBannerParams(ctx context.Context, id int) (banner_model.BannerParams, error)
+	DeleteBanner(ctx context.Context, id int) (bool, error)
 }

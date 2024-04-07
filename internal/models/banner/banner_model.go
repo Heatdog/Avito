@@ -37,7 +37,12 @@ type Banner struct {
 	UpdatedAt time.Time   `json:"updated_at"`
 }
 
-type CacheKey struct {
+type BannerKey struct {
 	TagID     int
+	FeatureID int
+}
+
+type BannerParams struct {
+	TagIDs    []int
 	FeatureID int
 }
