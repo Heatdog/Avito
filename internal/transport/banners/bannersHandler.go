@@ -67,7 +67,7 @@ func (handler *bannersHandler) createBanner(w http.ResponseWriter, r *http.Reque
 	handler.logger.Debug("read request body")
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
-		handler.logger.Warn(err.Error())
+		handler.logger.Debug(err.Error())
 		transport.ResponseWriteError(w, http.StatusBadRequest, err.Error(), handler.logger)
 		return
 	}
@@ -79,18 +79,20 @@ func (handler *bannersHandler) createBanner(w http.ResponseWriter, r *http.Reque
 	var banner banner_model.BannerInsert
 
 	if err := json.Unmarshal(body, &banner); err != nil {
-		handler.logger.Warn(err.Error())
+		handler.logger.Debug(err.Error())
 		transport.ResponseWriteError(w, http.StatusBadRequest, err.Error(), handler.logger)
 		return
 	}
 
 	handler.logger.Debug("validate request body", slog.Any("banner", banner))
 	validate := validator.New(validator.WithRequiredStructEnabled())
+	validate.RegisterValidation("json", banner_model.ValidateJson)
 	if err = validate.Struct(banner); err != nil {
-		handler.logger.Warn(err.Error())
+		handler.logger.Debug(err.Error())
 		transport.ResponseWriteError(w, http.StatusBadRequest, err.Error(), handler.logger)
 		return
 	}
+	handler.logger.Debug("valid successful")
 
 	id, err := handler.service.InsertBanner(r.Context(), banner)
 	if err != nil {
@@ -112,7 +114,7 @@ func (handler *bannersHandler) createBanner(w http.ResponseWriter, r *http.Reque
 // @Param tag_id query integer true "tag_id"
 // @Param feature_id query integer true "feature_id"
 // @Param use_last_revision query boolean false "use_last_revision"
-// @Success 200 {object} json JSON-отображение баннера
+// @Success 200 {object} object JSON-отображение баннера
 // @Failure 400 {object} transport.RespWriterError Некорректные данные
 // @Failure 401 {object} nil Пользователь не авторизован
 // @Failure 403 {object} nil Пользователь не имеет доступа
@@ -129,7 +131,7 @@ func (handler *bannersHandler) getUserBanner(w http.ResponseWriter, r *http.Requ
 
 	params, err := handler.validateUserBannerParams(tagIdStr, featureIdStr, useLastRevisionStr)
 	if err != nil {
-		handler.logger.Warn(err.Error())
+		handler.logger.Debug(err.Error())
 		transport.ResponseWriteError(w, http.StatusBadRequest, err.Error(), handler.logger)
 		return
 	}
@@ -195,12 +197,12 @@ func (handler *bannersHandler) validateUserBannerParams(tagIdStr, featureIdStr,
 // @Param tag_id query integer false "tag_id"
 // @Param feature_id query integer false "feature_id"
 // @Param limit query integer false "limit"
-// @Param offset query integer false "limit"
+// @Param offset query integer false "offset"
 // @Success 200 {object} []banner_model.Banner Список баннеров
 // @Failure 401 {object} nil Пользователь не авторизован
 // @Failure 403 {object} nil Пользователь не имеет доступа
 // @Failure 500 {object} transport.RespWriterError Внутренняя ошибка сервера
-// @Router /banner [post]
+// @Router /banner [get]
 func (handler *bannersHandler) getBanners(w http.ResponseWriter, r *http.Request) {
 	handler.logger.Debug("get banners handler")
 
@@ -212,14 +214,31 @@ func (handler *bannersHandler) getBanners(w http.ResponseWriter, r *http.Request
 
 	params, err := handler.validateBannersParams(tagIdStr, featureIdStr, limitStr, offsetStr)
 	if err != nil {
-		handler.logger.Warn(err.Error())
+		handler.logger.Debug(err.Error())
 		transport.ResponseWriteError(w, http.StatusBadRequest, err.Error(), handler.logger)
 		return
 	}
 
-	handler.logger.Debug("params", slog.Int("tag_id", *params.TagID), slog.Int("feature_id", *params.FeatureID),
-		slog.Int("limit", *params.Limit), slog.Int("offset", *params.Offset))
+	handler.logger.Debug("params", slog.Any("params", params))
 
+	banners, err := handler.service.GetBanners(r.Context(), params)
+	if err != nil {
+		handler.logger.Warn(err.Error())
+		transport.ResponseWriteError(w, http.StatusInternalServerError, err.Error(), handler.logger)
+		return
+	}
+
+	resp, err := json.Marshal(banners)
+	if err != nil {
+		handler.logger.Warn(err.Error())
+		transport.ResponseWriteError(w, http.StatusInternalServerError, err.Error(), handler.logger)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Header().Add("content-type", "application/json")
+	w.Write(resp)
+	handler.logger.Debug(string(resp))
 }
 
 func (handler *bannersHandler) validateBannersParams(tagStr, featureStr, limitStr,
@@ -243,7 +262,7 @@ func (handler *bannersHandler) validateBannersParams(tagStr, featureStr, limitSt
 	}
 
 	if limitStr != "" {
-		limit, err := strconv.Atoi(featureStr)
+		limit, err := strconv.Atoi(limitStr)
 		if err != nil {
 			return banner_model.BannerParams{}, err
 		}

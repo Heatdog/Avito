@@ -8,6 +8,6 @@ import (
 
 type BannerRepository interface {
 	InsertBanner(ctx context.Context, banner banner_model.BannerInsert) (int, error)
-	GetUserBanner(ctx context.Context, params banner_model.BannerUserParams) (string, error)
+	GetUserBanner(ctx context.Context, params banner_model.BannerUserParams) (string, bool, error)
 	GetBanners(ctx context.Context, params banner_model.BannerParams) ([]banner_model.Banner, error)
 }

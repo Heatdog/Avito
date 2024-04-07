@@ -34,8 +34,14 @@ func (service *bannerService) InsertBanner(context context.Context, banner banne
 
 func (service *bannerService) GetUserBanner(context context.Context, params banner_model.BannerUserParams) (string, error) {
 	service.logger.Debug("get user banner service")
-
-	return service.repo.GetUserBanner(context, params)
+	content, isActive, err := service.repo.GetUserBanner(context, params)
+	if err != nil {
+		return "", err
+	}
+	if !isActive {
+		return "", nil
+	}
+	return content, nil
 }
 
 func (service *bannerService) GetBanners(context context.Context, params banner_model.BannerParams) ([]banner_model.Banner,

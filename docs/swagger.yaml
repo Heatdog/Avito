@@ -1,9 +1,28 @@
 basePath: /
 definitions:
+  banner_model.Banner:
+    properties:
+      banner_id:
+        type: integer
+      content:
+        type: object
+      created_at:
+        type: string
+      feature_id:
+        type: integer
+      is_active:
+        type: boolean
+      tag_ids:
+        items:
+          type: integer
+        type: array
+      updated_at:
+        type: string
+    type: object
   banner_model.BannerInsert:
     properties:
       content:
-        type: string
+        type: object
       feature_id:
         type: integer
       is_active:
@@ -14,7 +33,6 @@ definitions:
         minItems: 1
         type: array
     required:
-    - content
     - feature_id
     - is_active
     - tag_id
@@ -36,6 +54,48 @@ info:
   title: Сервис баннеров
 paths:
   /banner:
+    get:
+      description: Получение всех баннеров c фильтрацией по фиче и/или тегу
+      operationId: get-banner
+      parameters:
+      - description: tag_id
+        in: query
+        name: tag_id
+        type: integer
+      - description: feature_id
+        in: query
+        name: feature_id
+        type: integer
+      - description: limit
+        in: query
+        name: limit
+        type: integer
+      - description: limit
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/banner_model.Banner'
+            type: array
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/transport.RespWriterError'
+      security:
+      - ApiKeyAuth: []
+      summary: GetBanners
+      tags:
+      - banner
     post:
       consumes:
       - application/json
@@ -97,7 +157,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/transport.RespWriterBannerCreated'
+            type: object
         "400":
           description: Bad Request
           schema:

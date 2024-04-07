@@ -17,6 +17,71 @@ const docTemplate = `{
     "basePath": "{{.BasePath}}",
     "paths": {
         "/banner": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Получение всех баннеров c фильтрацией по фиче и/или тегу",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "banner"
+                ],
+                "summary": "GetBanners",
+                "operationId": "get-banner",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "tag_id",
+                        "name": "tag_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "feature_id",
+                        "name": "feature_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "limit",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "limit",
+                        "name": "offset",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/banner_model.Banner"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/transport.RespWriterError"
+                        }
+                    }
+                }
+            },
             "post": {
                 "security": [
                     {
@@ -116,7 +181,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/transport.RespWriterBannerCreated"
+                            "type": "object"
                         }
                     },
                     "400": {
@@ -145,17 +210,45 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "banner_model.Banner": {
+            "type": "object",
+            "properties": {
+                "banner_id": {
+                    "type": "integer"
+                },
+                "content": {
+                    "type": "object"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "feature_id": {
+                    "type": "integer"
+                },
+                "is_active": {
+                    "type": "boolean"
+                },
+                "tag_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
         "banner_model.BannerInsert": {
             "type": "object",
             "required": [
-                "content",
                 "feature_id",
                 "is_active",
                 "tag_id"
             ],
             "properties": {
                 "content": {
-                    "type": "string"
+                    "type": "object"
                 },
                 "feature_id": {
                     "type": "integer"

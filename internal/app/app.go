@@ -71,7 +71,7 @@ func App() {
 	logger.Info("adding swagger documentation")
 	host := fmt.Sprintf("%s:%s", cfg.Server.IP, cfg.Server.Port)
 	router.PathPrefix("/swagger/").Handler(httpSwagger.Handler(
-		httpSwagger.URL(fmt.Sprintf("http://%s/swagger/doc.json", host)),
+		httpSwagger.URL(fmt.Sprintf("http://localhost:%s/swagger/doc.json", cfg.Server.Port)),
 		httpSwagger.DeepLinking(true),
 		httpSwagger.DocExpansion("none"),
 		httpSwagger.DomID("swagger-ui"),
