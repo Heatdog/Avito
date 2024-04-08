@@ -88,27 +88,5 @@ func (service *bannerService) GetBanners(context context.Context, params query_p
 func (service *bannerService) DeleteBanner(context context.Context, id int) (bool, error) {
 	service.logger.Debug("delete banner", slog.Int("id", id))
 
-	params, err := service.repo.GetBannerParams(context, id)
-	if err != nil {
-		return false, err
-	}
-
-	ok, err := service.repo.DeleteBanner(context, id)
-	if err != nil {
-		return false, err
-	}
-	if !ok {
-		return false, nil
-	}
-
-	go func(params banner_model.BannerParams) {
-		for _, tagID := range params.TagIDs {
-			service.cache.Remove(context, banner_model.BannerKey{
-				FeatureID: params.FeatureID,
-				TagID:     tagID,
-			})
-		}
-	}(params)
-
-	return true, nil
+	return service.repo.DeleteBanner(context, id)
 }

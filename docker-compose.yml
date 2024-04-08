@@ -7,7 +7,6 @@ services:
       - "8080:8080"
     depends_on:
       - postgre
-      - redis
     networks:
       - ps
 
@@ -22,16 +21,6 @@ services:
       - ps
     volumes:
       - ./migrations/Postgre.sql:/docker-entrypoint-initdb.d/Postgre.sql
-
-  redis:
-    image: redis:7.2-alpine
-    container_name: ps-redis-avito
-    environment:
-      - REDIS_PASSWORD=123
-      - REDIS_PORT=6379
-      - REDIS_DATABASES=0
-    networks:
-      - ps
 
 networks:
   ps:

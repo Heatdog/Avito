@@ -14,7 +14,7 @@ password_key: 123
 
 cache_settings:
   size: 0
-  ttl_in_minutes: 0
+  ttl_in_minutes: 5
 
 redis_settings:
   host: redis
