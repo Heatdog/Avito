@@ -1,6 +1,7 @@
 package hashicorp_lru
 
 import (
+	"context"
 	"log/slog"
 
 	cash "github.com/Heatdog/Avito/pkg/cache"
@@ -19,20 +20,20 @@ func NewLRU[K comparable, V any](logger *slog.Logger, cash *expirable.LRU[K, V])
 	}
 }
 
-func (lru LRU[K, V]) Get(key K) (V, bool) {
+func (lru LRU[K, V]) Get(ctx context.Context, key K) (V, bool, error) {
 	lru.logger.Debug("get", slog.Any("key", key))
 	val, ok := lru.cash.Get(key)
 	lru.logger.Debug("get result", slog.Any("value", val), slog.Any("ok", ok))
-	return val, ok
+	return val, ok, nil
 }
 
-func (lru LRU[K, V]) Add(key K, value V) bool {
+func (lru LRU[K, V]) Add(ctx context.Context, key K, value V) (bool, error) {
 	lru.logger.Debug("add", slog.Any("key", key), slog.Any("value", value))
 	evicated := lru.cash.Add(key, value)
-	return evicated
+	return evicated, nil
 }
 
-func (lru LRU[K, V]) Remove(key K) bool {
+func (lru LRU[K, V]) Remove(ctx context.Context, key K) (bool, error) {
 	lru.logger.Debug("delete", slog.Any("key", key))
-	return lru.cash.Remove(key)
+	return lru.cash.Remove(key), nil
 }

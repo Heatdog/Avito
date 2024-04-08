@@ -36,22 +36,25 @@ func NewBannerService(logger *slog.Logger, repo banner_repository.BannerReposito
 	}
 }
 
-func (service *bannerService) InsertBanner(context context.Context, banner banner_model.BannerInsert) (int, error) {
+func (service *bannerService) InsertBanner(ctx context.Context, banner banner_model.BannerInsert) (int, error) {
 	service.logger.Debug("insert banner serivce")
 
-	return service.repo.InsertBanner(context, banner)
+	return service.repo.InsertBanner(ctx, banner)
 }
 
-func (service *bannerService) GetUserBanner(context context.Context,
+func (service *bannerService) GetUserBanner(ctx context.Context,
 	params query_params.BannerUserParams) (interface{}, error) {
 
 	service.logger.Debug("get user banner service")
 
 	if !params.UseLastrRevision {
-		banner, ok := service.cache.Get(banner_model.BannerKey{
+		banner, ok, err := service.cache.Get(ctx, banner_model.BannerKey{
 			TagID:     params.TagID,
 			FeatureID: params.FeatureID,
 		})
+		if err != nil {
+			return "", err
+		}
 		if ok {
 			if !banner.IsActive && !service.tokenProvider.VerifyOnAdmin(params.Token) {
 				return "", pgx.ErrNoRows
@@ -60,14 +63,14 @@ func (service *bannerService) GetUserBanner(context context.Context,
 		}
 	}
 
-	banner, err := service.repo.GetUserBanner(context, params.TagID, params.FeatureID)
+	banner, err := service.repo.GetUserBanner(ctx, params.TagID, params.FeatureID)
 	if err != nil {
 		return "", err
 	}
 	if !banner.IsActive && !service.tokenProvider.VerifyOnAdmin(params.Token) {
 		return "", pgx.ErrNoRows
 	}
-	go service.cache.Add(banner_model.BannerKey{
+	go service.cache.Add(context.Background(), banner_model.BannerKey{
 		TagID:     params.TagID,
 		FeatureID: params.FeatureID,
 	}, &banner)
@@ -98,12 +101,14 @@ func (service *bannerService) DeleteBanner(context context.Context, id int) (boo
 		return false, nil
 	}
 
-	for _, tagID := range params.TagIDs {
-		service.cache.Remove(banner_model.BannerKey{
-			FeatureID: params.FeatureID,
-			TagID:     tagID,
-		})
-	}
+	go func(params banner_model.BannerParams) {
+		for _, tagID := range params.TagIDs {
+			service.cache.Remove(context, banner_model.BannerKey{
+				FeatureID: params.FeatureID,
+				TagID:     tagID,
+			})
+		}
+	}(params)
 
 	return true, nil
 }

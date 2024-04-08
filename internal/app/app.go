@@ -6,7 +6,6 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
-	"time"
 
 	_ "github.com/Heatdog/Avito/docs"
 
@@ -17,11 +16,10 @@ import (
 	banner_service "github.com/Heatdog/Avito/internal/service/banner"
 	banners_transport "github.com/Heatdog/Avito/internal/transport/banners"
 	middleware_transport "github.com/Heatdog/Avito/internal/transport/middleware"
-	hashicorp_lru "github.com/Heatdog/Avito/pkg/cache/hashi_corp"
+	redis_cache "github.com/Heatdog/Avito/pkg/cache/redis"
 	"github.com/Heatdog/Avito/pkg/client/postgre"
 	"github.com/Heatdog/Avito/pkg/token/simple_token"
 	"github.com/gorilla/mux"
-	"github.com/hashicorp/golang-lru/v2/expirable"
 	httpSwagger "github.com/swaggo/http-swagger/v2"
 )
 
@@ -63,9 +61,12 @@ func App() {
 	}
 
 	logger.Info("init cache")
-	hashiCorp := expirable.NewLRU[banner_model.BannerKey, *banner_model.Banner](cfg.Cache.Size, nil,
-		time.Duration(cfg.Cache.TTL))
-	cache := hashicorp_lru.NewLRU[banner_model.BannerKey, *banner_model.Banner](logger, hashiCorp)
+	cache, err := redis_cache.NewRedisClient[banner_model.BannerKey, *banner_model.Banner](ctx, &cfg.Redis,
+		&cfg.Cache, logger)
+	if err != nil {
+		logger.Error(err.Error())
+		panic(err)
+	}
 
 	router := mux.NewRouter()
 

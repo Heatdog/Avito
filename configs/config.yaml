@@ -14,4 +14,10 @@ password_key: 123
 
 cache_settings:
   size: 0
-  ttl: 0
+  ttl_in_minutes: 0
+
+redis_settings:
+  host: redis
+  port: 6379
+  password: 123
+  database: 0

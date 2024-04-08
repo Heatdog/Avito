@@ -1,12 +1,14 @@
 package cache
 
+import "context"
+
 type CacheKey struct {
 	TagID     int
 	FeatureID int
 }
 
 type Cache[K comparable, V any] interface {
-	Get(key K) (value V, ok bool)
-	Add(key K, value V) (evicated bool)
-	Remove(key K) bool
+	Get(ctx context.Context, key K) (value V, ok bool, err error)
+	Add(ctx context.Context, key K, value V) (evicated bool, err error)
+	Remove(ctx context.Context, key K) (bool, error)
 }

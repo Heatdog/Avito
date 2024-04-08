@@ -10,6 +10,7 @@ type ConfigStorage struct {
 	Server      ServerListen    `mapstructure:"server_listen"`
 	Postgre     PostgreSettings `mapstructure:"postgre_settings"`
 	Cache       CacheSettings   `mapstructure:"cache_settings"`
+	Redis       RedisSettings   `mapstructure:"redis_settings"`
 	PasswordKey string          `mapstructure:"password_key"`
 }
 
@@ -28,7 +29,14 @@ type PostgreSettings struct {
 
 type CacheSettings struct {
 	Size int `mapstructure:"host"`
-	TTL  int `mapstructure:"ttl"`
+	TTL  int `mapstructure:"ttl_in_minutes"`
+}
+
+type RedisSettings struct {
+	Host     string `mapstructure:"host"`
+	Port     int    `mapstructure:"port"`
+	Password string `mapstructure:"password"`
+	Database string `mapstructure:"database"`
 }
 
 func NewConfigStorage(logger *slog.Logger) *ConfigStorage {
