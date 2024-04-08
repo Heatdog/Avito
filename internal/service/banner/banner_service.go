@@ -13,10 +13,11 @@ import (
 )
 
 type BannerService interface {
-	InsertBanner(context context.Context, banner banner_model.BannerInsert) (int, error)
-	GetUserBanner(context context.Context, params query_params.BannerUserParams) (interface{}, error)
-	GetBanners(context context.Context, params query_params.BannerParams) ([]banner_model.Banner, error)
+	InsertBanner(context context.Context, banner *banner_model.BannerInsert) (int, error)
+	GetUserBanner(context context.Context, params *query_params.BannerUserParams) (interface{}, error)
+	GetBanners(context context.Context, params *query_params.BannerParams) ([]banner_model.Banner, error)
 	DeleteBanner(context context.Context, id int) (bool, error)
+	UpdateBanner(context context.Context, banner *banner_model.BannerUpdate) error
 }
 
 type bannerService struct {
@@ -36,14 +37,14 @@ func NewBannerService(logger *slog.Logger, repo banner_repository.BannerReposito
 	}
 }
 
-func (service *bannerService) InsertBanner(ctx context.Context, banner banner_model.BannerInsert) (int, error) {
+func (service *bannerService) InsertBanner(ctx context.Context, banner *banner_model.BannerInsert) (int, error) {
 	service.logger.Debug("insert banner serivce")
 
 	return service.repo.InsertBanner(ctx, banner)
 }
 
 func (service *bannerService) GetUserBanner(ctx context.Context,
-	params query_params.BannerUserParams) (interface{}, error) {
+	params *query_params.BannerUserParams) (interface{}, error) {
 
 	service.logger.Debug("get user banner service")
 
@@ -78,7 +79,7 @@ func (service *bannerService) GetUserBanner(ctx context.Context,
 	return banner.Content, nil
 }
 
-func (service *bannerService) GetBanners(context context.Context, params query_params.BannerParams) ([]banner_model.Banner,
+func (service *bannerService) GetBanners(context context.Context, params *query_params.BannerParams) ([]banner_model.Banner,
 	error) {
 
 	service.logger.Debug("get banners")
@@ -89,4 +90,10 @@ func (service *bannerService) DeleteBanner(context context.Context, id int) (boo
 	service.logger.Debug("delete banner", slog.Int("id", id))
 
 	return service.repo.DeleteBanner(context, id)
+}
+
+func (service *bannerService) UpdateBanner(context context.Context, banner *banner_model.BannerUpdate) error {
+	service.logger.Debug("update banner", slog.Int("id", banner.ID))
+
+	return service.repo.UpdateBanner(context, banner)
 }

@@ -33,9 +33,23 @@ definitions:
         minItems: 1
         type: array
     required:
+    - content
     - feature_id
-    - is_active
     - tag_id
+    type: object
+  banner_model.BannerUpdate:
+    properties:
+      content:
+        type: object
+      feature_id:
+        type: integer
+      is_active:
+        type: boolean
+      tag_id:
+        items:
+          type: integer
+        minItems: 1
+        type: array
     type: object
   transport.RespWriterBannerCreated:
     properties:
@@ -70,7 +84,7 @@ paths:
         in: query
         name: limit
         type: integer
-      - description: limit
+      - description: offset
         in: query
         name: offset
         type: integer
@@ -130,6 +144,77 @@ paths:
       security:
       - ApiKeyAuth: []
       summary: CreateBanner
+      tags:
+      - banner
+  /banner/{id}:
+    delete:
+      description: Удаление баннера по идентификатору
+      operationId: delete-banner
+      parameters:
+      - description: id
+        in: path
+        name: id
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/transport.RespWriterError'
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "404":
+          description: Not Found
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/transport.RespWriterError'
+      security:
+      - ApiKeyAuth: []
+      summary: DeleteBanner
+      tags:
+      - banner
+    patch:
+      description: Обновление содержимого баннера
+      operationId: update-banner
+      parameters:
+      - description: id
+        in: path
+        name: id
+        type: integer
+      - description: banner info
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/banner_model.BannerUpdate'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/transport.RespWriterError'
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "404":
+          description: Not Found
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/transport.RespWriterError'
+      security:
+      - ApiKeyAuth: []
+      summary: UpdateBanner
       tags:
       - banner
   /user_banner:

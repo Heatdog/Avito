@@ -10,6 +10,7 @@ import (
 	banner_repository "github.com/Heatdog/Avito/internal/repository/banner"
 	"github.com/Heatdog/Avito/pkg/client"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 )
 
 type bannerRepository struct {
@@ -24,7 +25,7 @@ func NewBannerRepository(logger *slog.Logger, dbClient client.Client) banner_rep
 	}
 }
 
-func (repo *bannerRepository) InsertBanner(ctx context.Context, banner banner_model.BannerInsert) (int, error) {
+func (repo *bannerRepository) InsertBanner(ctx context.Context, banner *banner_model.BannerInsert) (int, error) {
 	repo.logger.Debug("insert banner repository")
 
 	repo.logger.Debug("begin transaction")
@@ -61,7 +62,7 @@ func (repo *bannerRepository) InsertBanner(ctx context.Context, banner banner_mo
 }
 
 func (repo *bannerRepository) insertInBannerTable(ctx context.Context, transaction pgx.Tx,
-	banner banner_model.BannerInsert) (int, error) {
+	banner *banner_model.BannerInsert) (int, error) {
 	repo.logger.Debug("insert into banners", slog.Any("banner", banner))
 
 	q := `
@@ -125,7 +126,7 @@ func (repo *bannerRepository) GetUserBanner(ctx context.Context, tagID, feauture
 	return banner, nil
 }
 
-func (repo *bannerRepository) GetBanners(ctx context.Context, params query_params.BannerParams) ([]banner_model.Banner,
+func (repo *bannerRepository) GetBanners(ctx context.Context, params *query_params.BannerParams) ([]banner_model.Banner,
 	error) {
 
 	repo.logger.Debug("get banners repository")
@@ -148,7 +149,7 @@ func (repo *bannerRepository) GetBanners(ctx context.Context, params query_param
 	return banners, nil
 }
 
-func (repo *bannerRepository) getOnlyBanners(ctx context.Context, params query_params.BannerParams) ([]banner_model.Banner,
+func (repo *bannerRepository) getOnlyBanners(ctx context.Context, params *query_params.BannerParams) ([]banner_model.Banner,
 	error) {
 
 	var rows pgx.Rows
@@ -188,7 +189,7 @@ func (repo *bannerRepository) getOnlyBanners(ctx context.Context, params query_p
 	return banners, nil
 }
 
-func (repo *bannerRepository) makeQueryBanner(params query_params.BannerParams) string {
+func (repo *bannerRepository) makeQueryBanner(params *query_params.BannerParams) string {
 	q := `
 		SELECT b.id, b.content, b.is_active, b.created_at, b.updated_at
 		FROM banners b
@@ -261,4 +262,93 @@ func (repo *bannerRepository) DeleteBanner(ctx context.Context, id int) (bool, e
 		return false, nil
 	}
 	return true, nil
+}
+
+// Обновить содержимое самой таблицы -> посмотреть связанные id -> если не nil, то удалить старые и добавить новые
+func (repo *bannerRepository) UpdateBanner(ctx context.Context, banner *banner_model.BannerUpdate) error {
+	repo.logger.Debug("update banner", slog.Int("id", banner.ID))
+
+	tx, err := repo.dbClient.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err != nil {
+			repo.logger.Warn(err.Error())
+			repo.logger.Debug("rollback")
+			tx.Rollback(ctx)
+		} else {
+			repo.logger.Debug("success")
+			repo.logger.Debug("commit")
+			tx.Commit(ctx)
+		}
+	}()
+
+	err = repo.updateOnlyBanner(ctx, tx, banner)
+	if err != nil {
+		return err
+	}
+
+	if banner.FeatureID != nil || banner.TagsID != nil {
+
+		if err = repo.deleteCrossTable(ctx, tx, banner.ID); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (repo *bannerRepository) updateOnlyBanner(ctx context.Context, tx pgx.Tx, banner *banner_model.BannerUpdate) error {
+	q := `
+		UPDATE banners
+	`
+	var tag pgconn.CommandTag
+	var err error
+	if banner.Content != nil {
+		q += " SET content = $1"
+		if banner.IsActive != nil {
+			q += ", is_active = $2, updated_at = now() WHERE id = $3"
+			repo.logger.Debug(q)
+
+			tag, err = tx.Exec(ctx, q, banner.Content, *banner.IsActive, banner.ID)
+		} else {
+			q += ", updated_at = now() WHERE id = $2"
+			repo.logger.Debug(q)
+
+			tag, err = tx.Exec(ctx, q, banner.Content, banner.ID)
+		}
+	} else if banner.IsActive != nil {
+		q += " SET is_active = $1, updated_at = now() WHERE id = $2"
+		repo.logger.Debug(q)
+
+		tag, err = tx.Exec(ctx, q, *banner.IsActive, banner.ID)
+	} else {
+		q += " SET updated_at = now() WHERE id = $1"
+		repo.logger.Debug(q)
+
+		tag, err = tx.Exec(ctx, q, banner.ID)
+	}
+
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() != 1 {
+		return fmt.Errorf("row affected not equal 1")
+	}
+	return nil
+}
+
+func (repo *bannerRepository) deleteCrossTable(ctx context.Context, tx pgx.Tx, bannerID int) error {
+	q := `
+		DELETE FROM features_tags_to_banners
+		WHERE banner_id = $1
+	`
+	repo.logger.Debug("repo query", slog.String("query", q))
+
+	if _, err := tx.Exec(ctx, q, bannerID); err != nil {
+		repo.logger.Warn(err.Error())
+		return err
+	}
+	return nil
 }
