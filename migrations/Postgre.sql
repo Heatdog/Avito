@@ -12,8 +12,8 @@ CREATE TABLE IF NOT EXISTS banners(
     id SERIAL PRIMARY KEY,
     content json NOT NULL,
     is_active BOOLEAN DEFAULT true,
-    created_at DATE DEFAULT now(),
-    updated_at DATE DEFAULT now()
+    created_at TIMESTAMP DEFAULT now(),
+    updated_at TIMESTAMP DEFAULT now()
 );
 
 CREATE TABLE IF NOT EXISTS features_tags_to_banners(

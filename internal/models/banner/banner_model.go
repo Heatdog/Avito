@@ -29,10 +29,10 @@ type BannerInsert struct {
 
 type BannerUpdate struct {
 	ID        int         `json:"banner_id" validate:"numeric,required"`
-	TagsID    *[]int      `json:"tag_id,omitempty" validate:"min=1,dive,numeric"`
-	FeatureID *int        `json:"feature_id,omitempty" validate:"numeric"`
-	Content   interface{} `json:"content,omitempty" validate:"json" swaggertype:"object"`
-	IsActive  *bool       `json:"is_active,omitempty" validate:"boolean"`
+	TagsID    *[]int      `json:"tag_id,omitempty" validate:"omitnil,min=1,dive,numeric"`
+	FeatureID *int        `json:"feature_id,omitempty" validate:"omitnil,numeric"`
+	Content   interface{} `json:"content,omitempty" validate:"omitnil,json" swaggertype:"object"`
+	IsActive  *bool       `json:"is_active,omitempty" validate:"omitnil,boolean"`
 }
 
 type Banner struct {

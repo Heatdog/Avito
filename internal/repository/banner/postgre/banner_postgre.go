@@ -52,11 +52,9 @@ func (repo *bannerRepository) InsertBanner(ctx context.Context, banner *banner_m
 		return 0, err
 	}
 
-	for _, tag := range banner.TagsID {
-		if err = repo.insertCrossTable(ctx, transaction, tag, banner.FeatureID, id); err != nil {
-			repo.logger.Warn(err.Error())
-			return 0, err
-		}
+	if err = repo.insertCrossTable(ctx, transaction, banner.FeatureID, id, banner.TagsID); err != nil {
+		repo.logger.Warn(err.Error())
+		return 0, err
 	}
 	return id, nil
 }
@@ -82,10 +80,10 @@ func (repo *bannerRepository) insertInBannerTable(ctx context.Context, transacti
 	return id, nil
 }
 
-func (repo *bannerRepository) insertCrossTable(ctx context.Context, transaction pgx.Tx, tagId, feauterId,
-	bannerId int) error {
-	repo.logger.Debug("insert into features_tags_to_banners table", slog.Int("tagId", tagId),
-		slog.Int("bannerId", bannerId), slog.Int("feauterId", feauterId))
+func (repo *bannerRepository) insertCrossTable(ctx context.Context, transaction pgx.Tx, featureID, bannerId int,
+	tagIDs []int) error {
+	repo.logger.Debug("insert into features_tags_to_banners table", slog.Any("tagIds", tagIDs),
+		slog.Int("bannerId", bannerId), slog.Int("feauterIds", featureID))
 
 	q := `
 		INSERT INTO features_tags_to_banners (feature_id, tag_id, banner_id)
@@ -93,13 +91,15 @@ func (repo *bannerRepository) insertCrossTable(ctx context.Context, transaction 
 	`
 	repo.logger.Debug("repo query", slog.String("query", q))
 
-	tag, err := transaction.Exec(ctx, q, feauterId, tagId, bannerId)
-	if err != nil {
-		return err
-	}
+	for _, tagId := range tagIDs {
+		tag, err := transaction.Exec(ctx, q, featureID, tagId, bannerId)
+		if err != nil {
+			return err
+		}
 
-	if tag.RowsAffected() != 1 {
-		return fmt.Errorf("rows affected error")
+		if tag.RowsAffected() != 1 {
+			return fmt.Errorf("rows affected error")
+		}
 	}
 
 	return nil
@@ -204,7 +204,7 @@ func (repo *bannerRepository) makeQueryBanner(params *query_params.BannerParams)
 			q += "JOIN features_tags_to_banners ftb ON ftb.tag_id = $1 AND ftb.banner_id = b.id"
 		}
 	}
-	q += " ORDER BY b.updated_at"
+	q += " ORDER BY b.updated_at DESC"
 
 	if params.Limit != nil {
 		q += fmt.Sprintf(` LIMIT %d`, *params.Limit)
@@ -290,10 +290,33 @@ func (repo *bannerRepository) UpdateBanner(ctx context.Context, banner *banner_m
 	}
 
 	if banner.FeatureID != nil || banner.TagsID != nil {
+		params, err := repo.GetBannerParams(ctx, banner.ID)
+		if err != nil {
+			return err
+		}
 
 		if err = repo.deleteCrossTable(ctx, tx, banner.ID); err != nil {
 			return err
 		}
+
+		var feauterId int
+		var tagsIDs []int
+		if banner.FeatureID != nil {
+			feauterId = *banner.FeatureID
+		} else {
+			feauterId = params.FeatureID
+		}
+
+		if banner.TagsID != nil {
+			tagsIDs = *banner.TagsID
+		} else {
+			tagsIDs = params.TagIDs
+		}
+
+		if err = repo.insertCrossTable(ctx, tx, feauterId, banner.ID, tagsIDs); err != nil {
+			return err
+		}
+
 	}
 
 	return nil
