@@ -32,7 +32,7 @@ func ResponseWriteError(w http.ResponseWriter, statusCode int, errString string,
 		return
 	}
 
-	logger.Debug("response error write", slog.String("err", errString), slog.Int("sttus code", statusCode))
+	logger.Debug("response error write", slog.String("err", errString), slog.Int("satus code", statusCode))
 }
 
 func ResponseWriteBannerCreated(w http.ResponseWriter, id int, logger *slog.Logger) {

@@ -67,12 +67,13 @@ func App() {
 		time.Minute*time.Duration(cfg.Cache.TTL))
 	cache := hashicorp_lru.NewLRU(logger, cacheLRU)
 
-	router := mux.NewRouter()
-
 	tokenProvider := simple_token.NewSimpleTokenProvider()
 
 	logger.Debug("register middlewre")
 	middleware := middleware_transport.NewMiddleware(logger, tokenProvider)
+
+	router := mux.NewRouter()
+	router.Use(middleware.Logging)
 
 	logger.Debug("register banners handler")
 	bannerRepo := banner_postgre.NewBannerRepository(logger, dbClient)

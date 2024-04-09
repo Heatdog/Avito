@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"net/http"
 
+	"github.com/Heatdog/Avito/internal/transport"
 	"github.com/Heatdog/Avito/pkg/token"
 )
 
@@ -61,4 +62,22 @@ func (mid *Middleware) AdminAuth(next http.HandlerFunc) http.HandlerFunc {
 
 		next(w, r)
 	}
+}
+
+func (mid *Middleware) Logging(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		defer func() {
+			err := recover()
+			if err != nil {
+				transport.ResponseWriteError(w, http.StatusInternalServerError, err.(error).Error(), mid.logger)
+			}
+		}()
+
+		mid.logger.Debug("request",
+			slog.String("URL", r.URL.Path),
+			slog.String("method", r.Method),
+			slog.String("host", r.RemoteAddr))
+
+		next.ServeHTTP(w, r)
+	})
 }
