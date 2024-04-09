@@ -1,47 +1,14 @@
 package query_params
 
 import (
-	"fmt"
 	"strconv"
 )
 
 type BannerUserParams struct {
-	TagID            int
-	FeatureID        int
-	UseLastrRevision bool
+	TagID            string `validate:"required,numeric"`
+	FeatureID        string `validate:"required,numeric"`
+	UseLastrRevision string `validate:"required,boolean"`
 	Token            string
-}
-
-func ValidateUserBannerParams(tagIdStr, featureIdStr,
-	useLastRevisionStr string) (BannerUserParams, error) {
-
-	tagId, err := strconv.Atoi(tagIdStr)
-	if err != nil {
-		return BannerUserParams{}, err
-	}
-
-	featureId, err := strconv.Atoi(featureIdStr)
-	if err != nil {
-		return BannerUserParams{}, err
-	}
-
-	useLastRevision := false
-	if useLastRevisionStr != "" {
-		switch useLastRevisionStr {
-		case "true":
-			useLastRevision = true
-		case "false":
-			useLastRevision = false
-		default:
-			err = fmt.Errorf("incorrect use_last_revision value")
-			return BannerUserParams{}, err
-		}
-	}
-	return BannerUserParams{
-		TagID:            tagId,
-		FeatureID:        featureId,
-		UseLastrRevision: useLastRevision,
-	}, nil
 }
 
 type BannerParams struct {
@@ -85,6 +52,32 @@ func ValidateBannersParams(tagStr, featureStr, limitStr,
 			return BannerParams{}, err
 		}
 		res.Offset = &offset
+	}
+
+	return res, nil
+}
+
+type DeleteBannerParams struct {
+	TagID     *int
+	FeatureID *int
+}
+
+func ValidateDeleteBannerParams(tagStr, featureStr string) (DeleteBannerParams, error) {
+	res := DeleteBannerParams{}
+	if tagStr != "" {
+		tag, err := strconv.Atoi(tagStr)
+		if err != nil {
+			return DeleteBannerParams{}, err
+		}
+		res.TagID = &tag
+	}
+
+	if featureStr != "" {
+		featureId, err := strconv.Atoi(featureStr)
+		if err != nil {
+			return DeleteBannerParams{}, err
+		}
+		res.FeatureID = &featureId
 	}
 
 	return res, nil

@@ -39,6 +39,8 @@ definitions:
     type: object
   banner_model.BannerUpdate:
     properties:
+      banner_id:
+        type: integer
       content:
         type: object
       feature_id:
@@ -50,6 +52,8 @@ definitions:
           type: integer
         minItems: 1
         type: array
+    required:
+    - banner_id
     type: object
   transport.RespWriterBannerCreated:
     properties:
@@ -68,6 +72,28 @@ info:
   title: Сервис баннеров
 paths:
   /banner:
+    delete:
+      description: Удаления баннеров по фиче или тегу
+      operationId: delete-banner-tag-feature
+      parameters:
+      - description: tag_id
+        in: query
+        name: tag_id
+        type: integer
+      - description: feature_id
+        in: query
+        name: feature_id
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+      security:
+      - ApiKeyAuth: []
+      summary: DeleteBannerOnTagOrFeature
+      tags:
+      - banner
     get:
       description: Получение всех баннеров c фильтрацией по фиче и/или тегу
       operationId: get-banner

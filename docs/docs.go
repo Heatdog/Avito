@@ -137,6 +137,41 @@ const docTemplate = `{
                         }
                     }
                 }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Удаления баннеров по фиче или тегу",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "banner"
+                ],
+                "summary": "DeleteBannerOnTagOrFeature",
+                "operationId": "delete-banner-tag-feature",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "tag_id",
+                        "name": "tag_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "feature_id",
+                        "name": "feature_id",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "description": "Accepted"
+                    }
+                }
             }
         },
         "/banner/{id}": {
@@ -378,7 +413,13 @@ const docTemplate = `{
         },
         "banner_model.BannerUpdate": {
             "type": "object",
+            "required": [
+                "banner_id"
+            ],
             "properties": {
+                "banner_id": {
+                    "type": "integer"
+                },
                 "content": {
                     "type": "object"
                 },

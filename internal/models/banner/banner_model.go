@@ -46,8 +46,8 @@ type Banner struct {
 }
 
 type BannerKey struct {
-	TagID     int
-	FeatureID int
+	TagID     string
+	FeatureID string
 }
 
 type BannerParams struct {

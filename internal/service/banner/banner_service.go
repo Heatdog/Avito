@@ -18,6 +18,7 @@ type BannerService interface {
 	GetBanners(context context.Context, params *query_params.BannerParams) ([]banner_model.Banner, error)
 	DeleteBanner(context context.Context, id int) (bool, error)
 	UpdateBanner(context context.Context, banner *banner_model.BannerUpdate) error
+	DeleteBanners(context context.Context, params *query_params.DeleteBannerParams)
 }
 
 type bannerService struct {
@@ -48,7 +49,7 @@ func (service *bannerService) GetUserBanner(ctx context.Context,
 
 	service.logger.Debug("get user banner service")
 
-	if !params.UseLastrRevision {
+	if params.UseLastrRevision == "false" {
 		banner, ok, err := service.cache.Get(ctx, banner_model.BannerKey{
 			TagID:     params.TagID,
 			FeatureID: params.FeatureID,
@@ -96,4 +97,10 @@ func (service *bannerService) UpdateBanner(context context.Context, banner *bann
 	service.logger.Debug("update banner", slog.Int("id", banner.ID))
 
 	return service.repo.UpdateBanner(context, banner)
+}
+
+func (service *bannerService) DeleteBanners(context context.Context, params *query_params.DeleteBannerParams) {
+	service.logger.Debug("delete banner params", slog.Any("params", params))
+
+	service.repo.DeleteBanners(context, params)
 }
