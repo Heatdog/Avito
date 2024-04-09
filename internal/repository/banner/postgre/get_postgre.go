@@ -14,7 +14,7 @@ func (repo *bannerRepository) GetUserBanner(ctx context.Context, tagID, feauture
 	repo.logger.Debug("get user banner repository")
 
 	q := `
-		SELECT b.id, b.content, b.is_active
+		SELECT b.id, b.content_v1, b.content_v2, b.content_v3, b.is_active
 		FROM banners b
 		JOIN features_tags_to_banners ftb ON ftb.banner_id = b.id
 		WHERE ftb.feature_id = $1 AND ftb.tag_id = $2
@@ -23,7 +23,8 @@ func (repo *bannerRepository) GetUserBanner(ctx context.Context, tagID, feauture
 	row := repo.dbClient.QueryRow(ctx, q, feautureID, tagID)
 
 	var banner banner_model.Banner
-	if err := row.Scan(&banner.ID, &banner.Content, &banner.IsActive); err != nil {
+	if err := row.Scan(&banner.ID, &banner.ContentV1, &banner.ContentV2, &banner.ContentV3,
+		&banner.IsActive); err != nil {
 		repo.logger.Warn(err.Error())
 		return banner_model.Banner{}, err
 	}
@@ -87,9 +88,8 @@ func (repo *bannerRepository) getOnlyBanners(ctx context.Context, params *query_
 	for rows.Next() {
 
 		var banner banner_model.Banner
-		if err = rows.Scan(&banner.ID, &banner.Content, &banner.IsActive, &banner.CreatedAt,
-			&banner.UpdatedAt); err != nil {
-
+		if err = rows.Scan(&banner.ID, &banner.ContentV1, &banner.ContentV2, &banner.ContentV3,
+			&banner.IsActive, &banner.CreatedAt, &banner.UpdatedAt); err != nil {
 			return nil, err
 		}
 		banners[banner.ID] = banner
@@ -99,7 +99,7 @@ func (repo *bannerRepository) getOnlyBanners(ctx context.Context, params *query_
 
 func (repo *bannerRepository) makeQueryBanner(params *query_params.BannerParams) string {
 	q := `
-		SELECT b.id, b.content, b.is_active, b.created_at, b.updated_at
+		SELECT b.id, b.content_v1, b.content_v2, b.content_v3, b.is_active, b.created_at, b.updated_at
 		FROM banners b
 	`
 	if params.FeatureID != nil {

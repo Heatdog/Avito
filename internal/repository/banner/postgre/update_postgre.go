@@ -72,7 +72,7 @@ func (repo *bannerRepository) updateOnlyBanner(ctx context.Context, tx pgx.Tx, b
 	var tag pgconn.CommandTag
 	var err error
 	if banner.Content != nil {
-		q += " SET content = $1"
+		q += " SET content_v1 = $1"
 		if banner.IsActive != nil {
 			q += ", is_active = $2, updated_at = now() WHERE id = $3"
 			repo.logger.Debug(q)

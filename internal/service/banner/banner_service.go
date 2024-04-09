@@ -61,7 +61,16 @@ func (service *bannerService) GetUserBanner(ctx context.Context,
 			if !banner.IsActive && !service.tokenProvider.VerifyOnAdmin(params.Token) {
 				return "", pgx.ErrNoRows
 			}
-			return banner.Content, nil
+			switch params.Version {
+			case "1":
+				return banner.ContentV1, nil
+			case "2":
+				return banner.ContentV2, nil
+			case "3":
+				return banner.ContentV3, nil
+			default:
+				return "", pgx.ErrNoRows
+			}
 		}
 	}
 
@@ -77,7 +86,16 @@ func (service *bannerService) GetUserBanner(ctx context.Context,
 		FeatureID: params.FeatureID,
 	}, &banner)
 
-	return banner.Content, nil
+	switch params.Version {
+	case "1":
+		return banner.ContentV1, nil
+	case "2":
+		return banner.ContentV2, nil
+	case "3":
+		return banner.ContentV3, nil
+	default:
+		return "", pgx.ErrNoRows
+	}
 }
 
 func (service *bannerService) GetBanners(context context.Context, params *query_params.BannerParams) ([]banner_model.Banner,

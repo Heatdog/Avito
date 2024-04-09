@@ -39,7 +39,9 @@ type Banner struct {
 	ID        int         `json:"banner_id"`
 	TagsID    []int       `json:"tag_ids"`
 	FeatureID int         `json:"feature_id"`
-	Content   interface{} `json:"content" swaggertype:"object"`
+	ContentV1 interface{} `json:"content_v1" swaggertype:"object"`
+	ContentV2 interface{} `json:"content_v2" swaggertype:"object"`
+	ContentV3 interface{} `json:"content_v3" swaggertype:"object"`
 	IsActive  bool        `json:"is_active"`
 	CreatedAt time.Time   `json:"created_at"`
 	UpdatedAt time.Time   `json:"updated_at"`

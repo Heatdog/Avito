@@ -22,6 +22,7 @@ import (
 // @Param tag_id query integer true "tag_id"
 // @Param feature_id query integer true "feature_id"
 // @Param use_last_revision query boolean false "use_last_revision"
+// @Param version query integer false "version"
 // @Success 200 {object} object JSON-отображение баннера
 // @Failure 400 {object} transport.RespWriterError Некорректные данные
 // @Failure 401 {object} nil Пользователь не авторизован
@@ -40,6 +41,12 @@ func (handler *bannersHandler) getUserBanner(w http.ResponseWriter, r *http.Requ
 		FeatureID:        r.URL.Query().Get("feature_id"),
 		UseLastrRevision: r.URL.Query().Get("use_last_revision"),
 		Token:            token,
+	}
+	if params.UseLastrRevision == "" {
+		params.UseLastrRevision = "false"
+	}
+	if params.Version == "" {
+		params.Version = "1"
 	}
 
 	handler.logger.Debug("validate request params", slog.Any("params", params))

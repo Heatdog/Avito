@@ -48,7 +48,7 @@ func (repo *bannerRepository) insertInBannerTable(ctx context.Context, transacti
 	repo.logger.Debug("insert into banners", slog.Any("banner", banner))
 
 	q := `
-		INSERT INTO banners (content, is_active)
+		INSERT INTO banners (content_v1, is_active)
 		VALUES ($1, $2)
 		RETURNING id
 	`

@@ -7,7 +7,8 @@ import (
 type BannerUserParams struct {
 	TagID            string `validate:"required,numeric"`
 	FeatureID        string `validate:"required,numeric"`
-	UseLastrRevision string `validate:"required,boolean"`
+	UseLastrRevision string `validate:"omitempty,boolean"`
+	Version          string `validate:"omitempty,numeric,min=1,max=3"`
 	Token            string
 }
 

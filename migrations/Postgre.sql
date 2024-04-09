@@ -10,7 +10,9 @@ CREATE TABLE IF NOT EXISTS features(
 
 CREATE TABLE IF NOT EXISTS banners(
     id SERIAL PRIMARY KEY,
-    content json NOT NULL,
+    content_v1 json NOT NULL,
+    content_v2 json DEFAULT NULL,
+    content_v3 json DEFAULT NULL,
     is_active BOOLEAN DEFAULT true,
     created_at TIMESTAMP DEFAULT now(),
     updated_at TIMESTAMP DEFAULT now()
