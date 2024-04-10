@@ -66,14 +66,20 @@ func (repo *bannerRepository) getBannersID(ctx context.Context, params *query_pa
 	var rows pgx.Rows
 	var err error
 	if params.FeatureID != nil && params.TagID != nil {
+
 		q += " tag_id = $1 OR feature_id = $2"
 		rows, err = repo.dbClient.Query(ctx, q, params.TagID, params.FeatureID)
+
 	} else if params.FeatureID != nil {
+
 		q += " feature_id = $1"
 		rows, err = repo.dbClient.Query(ctx, q, params.FeatureID)
+
 	} else if params.TagID != nil {
+
 		q += " tag_id = $1"
 		rows, err = repo.dbClient.Query(ctx, q, params.TagID)
+
 	} else {
 		return res, nil
 	}

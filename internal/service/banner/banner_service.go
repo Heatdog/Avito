@@ -19,6 +19,7 @@ type BannerService interface {
 	DeleteBanner(context context.Context, id int) (bool, error)
 	UpdateBanner(context context.Context, banner *banner_model.BannerUpdate) error
 	DeleteBanners(context context.Context, params *query_params.DeleteBannerParams)
+	UpdateBannerVersion(context context.Context, id, version int) error
 }
 
 type bannerService struct {
@@ -121,4 +122,10 @@ func (service *bannerService) DeleteBanners(context context.Context, params *que
 	service.logger.Debug("delete banner params", slog.Any("params", params))
 
 	service.repo.DeleteBanners(context, params)
+}
+
+func (service *bannerService) UpdateBannerVersion(context context.Context, id, version int) error {
+	service.logger.Debug("update banner", slog.Int("id", id), slog.Int("version", version))
+
+	return service.repo.UpdateBannerVersion(context, id, version)
 }

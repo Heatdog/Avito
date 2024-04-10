@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"sort"
 
 	banner_model "github.com/Heatdog/Avito/internal/models/banner"
 	"github.com/Heatdog/Avito/internal/models/query_params"
@@ -25,6 +26,7 @@ func (repo *bannerRepository) GetUserBanner(ctx context.Context, tagID, feauture
 	var banner banner_model.Banner
 	if err := row.Scan(&banner.ID, &banner.ContentV1, &banner.ContentV2, &banner.ContentV3,
 		&banner.IsActive); err != nil {
+
 		repo.logger.Warn(err.Error())
 		return banner_model.Banner{}, err
 	}
@@ -45,16 +47,22 @@ func (repo *bannerRepository) GetBanners(ctx context.Context, params *query_para
 	var res []banner_model.Banner
 
 	for _, banner := range banners {
+
 		bannerParams, err := repo.GetBannerParams(ctx, banner.ID)
 		if err != nil {
 			repo.logger.Warn(err.Error())
 			return nil, err
 		}
+
 		banner = banners[banner.ID]
 		banner.FeatureID = bannerParams.FeatureID
 		banner.TagsID = bannerParams.TagIDs
 		res = append(res, banner)
 	}
+
+	sort.Slice(res, func(i, j int) bool {
+		return res[i].UpdatedAt.Before(res[i].UpdatedAt)
+	})
 
 	return res, nil
 }
@@ -103,14 +111,18 @@ func (repo *bannerRepository) makeQueryBanner(params *query_params.BannerParams)
 		FROM banners b
 	`
 	if params.FeatureID != nil {
+
 		q += "JOIN features_tags_to_banners ftb ON ftb.feature_id = $1 AND ftb.banner_id = b.id"
 		if params.TagID != nil {
 			q += " AND ftb.tag_id = $2"
 		}
+
 	} else {
+
 		if params.TagID != nil {
 			q += "JOIN features_tags_to_banners ftb ON ftb.tag_id = $1 AND ftb.banner_id = b.id"
 		}
+
 	}
 	q += " ORDER BY b.updated_at DESC"
 

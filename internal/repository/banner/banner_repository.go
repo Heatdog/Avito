@@ -15,4 +15,5 @@ type BannerRepository interface {
 	DeleteBanner(ctx context.Context, id int) (bool, error)
 	UpdateBanner(ctx context.Context, banner *banner_model.BannerUpdate) error
 	DeleteBanners(ctx context.Context, params *query_params.DeleteBannerParams) error
+	UpdateBannerVersion(ctx context.Context, id, version int) error
 }

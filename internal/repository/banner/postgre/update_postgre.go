@@ -72,7 +72,8 @@ func (repo *bannerRepository) updateOnlyBanner(ctx context.Context, tx pgx.Tx, b
 	var tag pgconn.CommandTag
 	var err error
 	if banner.Content != nil {
-		q += " SET content_v1 = $1"
+
+		q += " SET content_v1 = $1, content_v2 = content_v1, content_v3 = content_v2"
 		if banner.IsActive != nil {
 			q += ", is_active = $2, updated_at = now() WHERE id = $3"
 			repo.logger.Debug(q)
@@ -84,6 +85,7 @@ func (repo *bannerRepository) updateOnlyBanner(ctx context.Context, tx pgx.Tx, b
 
 			tag, err = tx.Exec(ctx, q, banner.Content, banner.ID)
 		}
+
 	} else if banner.IsActive != nil {
 		q += " SET is_active = $1, updated_at = now() WHERE id = $2"
 		repo.logger.Debug(q)
@@ -100,7 +102,7 @@ func (repo *bannerRepository) updateOnlyBanner(ctx context.Context, tx pgx.Tx, b
 		return err
 	}
 	if tag.RowsAffected() != 1 {
-		return fmt.Errorf("row affected not equal 1")
+		return pgx.ErrNoRows
 	}
 	return nil
 }
@@ -116,5 +118,27 @@ func (repo *bannerRepository) deleteCrossTable(ctx context.Context, tx pgx.Tx, b
 		repo.logger.Warn(err.Error())
 		return err
 	}
+	return nil
+}
+
+func (repo *bannerRepository) UpdateBannerVersion(ctx context.Context, id, version int) error {
+	repo.logger.Debug("update banner version", slog.Int("id", id), slog.Int("version", version))
+
+	q := fmt.Sprintf(`
+		UPDATE banners
+		SET content_v1 = content_v%d, content_v2 = content_v1, content_v3 = content_v2, updated_at = now()
+		WHERE id = $1
+	`, version)
+	repo.logger.Debug(q)
+
+	tag, err := repo.dbClient.Exec(ctx, q, id)
+	if err != nil {
+		return err
+	}
+
+	if tag.RowsAffected() != 1 {
+		return pgx.ErrNoRows
+	}
+
 	return nil
 }

@@ -16,7 +16,7 @@ type bannersHandler struct {
 	middleware *middleware_transport.Middleware
 }
 
-func NewBunnersHandler(logger *slog.Logger, service banner_service.BannerService,
+func NewBannersHandler(logger *slog.Logger, service banner_service.BannerService,
 	mid *middleware_transport.Middleware) transport.Handler {
 	return &bannersHandler{
 		logger:     logger,
@@ -26,9 +26,10 @@ func NewBunnersHandler(logger *slog.Logger, service banner_service.BannerService
 }
 
 const (
-	banner     = "/banner"
-	userBanner = "/user_banner"
-	bannerID   = "/banner/{id}"
+	banner        = "/banner"
+	userBanner    = "/user_banner"
+	bannerID      = "/banner/{id}"
+	bannerVersion = "/banner/{id}/{version}"
 )
 
 func (handler *bannersHandler) Register(router *mux.Router) {
@@ -44,4 +45,6 @@ func (handler *bannersHandler) Register(router *mux.Router) {
 		Methods(http.MethodPatch)
 	router.HandleFunc(banner, handler.middleware.Auth(handler.middleware.AdminAuth(handler.deleteBannerOnTagOrFeature))).
 		Methods(http.MethodDelete)
+	router.HandleFunc(bannerVersion, handler.middleware.Auth(handler.middleware.AdminAuth(handler.updateBannerVersion))).
+		Methods(http.MethodPatch)
 }

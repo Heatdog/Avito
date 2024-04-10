@@ -78,7 +78,7 @@ func App() {
 	logger.Debug("register banners handler")
 	bannerRepo := banner_postgre.NewBannerRepository(logger, dbClient)
 	bannerService := banner_service.NewBannerService(logger, bannerRepo, cache, tokenProvider)
-	bannerHandler := banners_transport.NewBunnersHandler(logger, bannerService, middleware)
+	bannerHandler := banners_transport.NewBannersHandler(logger, bannerService, middleware)
 	bannerHandler.Register(router)
 
 	logger.Info("adding swagger documentation")

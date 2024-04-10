@@ -4,7 +4,11 @@ definitions:
     properties:
       banner_id:
         type: integer
-      content:
+      content_v1:
+        type: object
+      content_v2:
+        type: object
+      content_v3:
         type: object
       created_at:
         type: string
@@ -39,8 +43,6 @@ definitions:
     type: object
   banner_model.BannerUpdate:
     properties:
-      banner_id:
-        type: integer
       content:
         type: object
       feature_id:
@@ -52,8 +54,6 @@ definitions:
           type: integer
         minItems: 1
         type: array
-    required:
-    - banner_id
     type: object
   transport.RespWriterBannerCreated:
     properties:
@@ -212,6 +212,7 @@ paths:
       - description: id
         in: path
         name: id
+        required: true
         type: integer
       - description: banner info
         in: body
@@ -243,6 +244,45 @@ paths:
       summary: UpdateBanner
       tags:
       - banner
+  /banner/{id}/{version}:
+    patch:
+      description: Обновление последней версии баннера
+      operationId: update-banner-version
+      parameters:
+      - description: id
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: version
+        in: path
+        name: version
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/transport.RespWriterError'
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "404":
+          description: Not Found
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/transport.RespWriterError'
+      security:
+      - ApiKeyAuth: []
+      summary: UpdateBannerVersion
+      tags:
+      - banner
   /user_banner:
     get:
       description: Получение баннера для пользователя
@@ -262,6 +302,10 @@ paths:
         in: query
         name: use_last_revision
         type: boolean
+      - description: version
+        in: query
+        name: version
+        type: integer
       produces:
       - application/json
       responses:

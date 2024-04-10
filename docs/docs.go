@@ -245,7 +245,8 @@ const docTemplate = `{
                         "type": "integer",
                         "description": "id",
                         "name": "id",
-                        "in": "path"
+                        "in": "path",
+                        "required": true
                     },
                     {
                         "description": "banner info",
@@ -255,6 +256,66 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/banner_model.BannerUpdate"
                         }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/transport.RespWriterError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "404": {
+                        "description": "Not Found"
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/transport.RespWriterError"
+                        }
+                    }
+                }
+            }
+        },
+        "/banner/{id}/{version}": {
+            "patch": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Обновление последней версии баннера",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "banner"
+                ],
+                "summary": "UpdateBannerVersion",
+                "operationId": "update-banner-version",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "version",
+                        "name": "version",
+                        "in": "path",
+                        "required": true
                     }
                 ],
                 "responses": {
@@ -321,6 +382,12 @@ const docTemplate = `{
                         "description": "use_last_revision",
                         "name": "use_last_revision",
                         "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "version",
+                        "name": "version",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -362,7 +429,13 @@ const docTemplate = `{
                 "banner_id": {
                     "type": "integer"
                 },
-                "content": {
+                "content_v1": {
+                    "type": "object"
+                },
+                "content_v2": {
+                    "type": "object"
+                },
+                "content_v3": {
                     "type": "object"
                 },
                 "created_at": {
@@ -413,13 +486,7 @@ const docTemplate = `{
         },
         "banner_model.BannerUpdate": {
             "type": "object",
-            "required": [
-                "banner_id"
-            ],
             "properties": {
-                "banner_id": {
-                    "type": "integer"
-                },
                 "content": {
                     "type": "object"
                 },
