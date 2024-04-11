@@ -58,7 +58,7 @@ func TestGetUserBanner(t *testing.T) {
 
 	bannerHandler.Register(router)
 
-	type mockBehavior func(banners *banner_model.Banner, params query_params.BannerUserParams)
+	type mockBehavior func(banners *banner_model.Banner, params query_params.BannerUserParams, err error)
 
 	testTable := []struct {
 		name   string
@@ -98,7 +98,7 @@ func TestGetUserBanner(t *testing.T) {
 			statusCode: http.StatusOK,
 			err:        nil,
 
-			mockFunc: func(banner *banner_model.Banner, params query_params.BannerUserParams) {
+			mockFunc: func(banner *banner_model.Banner, params query_params.BannerUserParams, err error) {
 
 				row := pgxmock.NewRows([]string{"id", "content_v1", "content_v2", "content_v3", "is_active"})
 				row.AddRow(banner.ID, banner.ContentV1, banner.ContentV2, banner.ContentV3, banner.IsActive)
@@ -135,7 +135,7 @@ func TestGetUserBanner(t *testing.T) {
 			statusCode: http.StatusOK,
 			err:        nil,
 
-			mockFunc: func(banner *banner_model.Banner, params query_params.BannerUserParams) {
+			mockFunc: func(banner *banner_model.Banner, params query_params.BannerUserParams, err error) {
 
 				row := pgxmock.NewRows([]string{"id", "content_v1", "content_v2", "content_v3", "is_active"})
 				row.AddRow(banner.ID, banner.ContentV1, banner.ContentV2, banner.ContentV3, banner.IsActive)
@@ -162,7 +162,7 @@ func TestGetUserBanner(t *testing.T) {
 			statusCode:  http.StatusNotFound,
 			err:         nil,
 
-			mockFunc: func(banner *banner_model.Banner, params query_params.BannerUserParams) {
+			mockFunc: func(banner *banner_model.Banner, params query_params.BannerUserParams, err error) {
 				dbMock.ExpectQuery(`SELECT b.id, b.content_v1, b.content_v2, b.content_v3, b.is_active
 					FROM banners b JOIN features_tags_to_banners ftb`).
 					WithArgs(params.FeatureID, params.TagID).
@@ -176,7 +176,7 @@ func TestGetUserBanner(t *testing.T) {
 			params: query_params.BannerUserParams{
 				TagID:            "1",
 				FeatureID:        "1",
-				UseLastrRevision: "true",
+				UseLastrRevision: "false",
 				Version:          "1",
 				Token:            "user_token",
 			},
@@ -195,13 +195,36 @@ func TestGetUserBanner(t *testing.T) {
 			statusCode: http.StatusOK,
 			err:        nil,
 
-			mockFunc: func(banner *banner_model.Banner, params query_params.BannerUserParams) {
+			mockFunc: func(banner *banner_model.Banner, params query_params.BannerUserParams, err error) {
 				for _, tag := range banner.TagsID {
 					cache.Add(context.Background(), banner_model.BannerKey{
 						TagID:     strconv.Itoa(tag),
 						FeatureID: strconv.Itoa(banner.FeatureID),
 					}, banner)
 				}
+			},
+		},
+		{
+			name:  "internal error",
+			path:  "/user_banner?tag_id=1&feature_id=1&use_last_revision=true&version=1",
+			token: "admin_token",
+			params: query_params.BannerUserParams{
+				TagID:            "1",
+				FeatureID:        "1",
+				UseLastrRevision: "true",
+				Version:          "1",
+				Token:            "user_token",
+			},
+
+			respBanners: nil,
+			statusCode:  http.StatusInternalServerError,
+			err:         fmt.Errorf("internal error"),
+
+			mockFunc: func(banner *banner_model.Banner, params query_params.BannerUserParams, err error) {
+				dbMock.ExpectQuery(`SELECT b.id, b.content_v1, b.content_v2, b.content_v3, b.is_active
+					FROM banners b JOIN features_tags_to_banners ftb`).
+					WithArgs(params.FeatureID, params.TagID).
+					WillReturnError(err)
 			},
 		},
 		{
@@ -214,7 +237,7 @@ func TestGetUserBanner(t *testing.T) {
 			statusCode:  http.StatusBadRequest,
 			err:         fmt.Errorf("Key: 'BannerUserParams.TagID' Error:Field validation for 'TagID' failed on the 'required' tag\nKey: 'BannerUserParams.FeatureID' Error:Field validation for 'FeatureID' failed on the 'required' tag"),
 
-			mockFunc: func(banner *banner_model.Banner, params query_params.BannerUserParams) {},
+			mockFunc: func(banner *banner_model.Banner, params query_params.BannerUserParams, err error) {},
 		},
 		{
 			name:   "no token",
@@ -226,7 +249,7 @@ func TestGetUserBanner(t *testing.T) {
 			statusCode:  http.StatusUnauthorized,
 			err:         nil,
 
-			mockFunc: func(banner *banner_model.Banner, params query_params.BannerUserParams) {},
+			mockFunc: func(banner *banner_model.Banner, params query_params.BannerUserParams, err error) {},
 		},
 	}
 
@@ -237,7 +260,7 @@ func TestGetUserBanner(t *testing.T) {
 
 			r.Header.Set("token", testCase.token)
 
-			testCase.mockFunc(testCase.respBanners, testCase.params)
+			testCase.mockFunc(testCase.respBanners, testCase.params, testCase.err)
 
 			w := httptest.NewRecorder()
 

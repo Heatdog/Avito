@@ -295,6 +295,31 @@ func TestUpdateBanner(t *testing.T) {
 			},
 		},
 		{
+			name:  "internal error",
+			path:  "/banner/1",
+			token: "admin_token",
+			reqBanner: banner_model.BannerUpdate{
+				FeatureID: Int(2),
+			},
+
+			bannerID: &RespID{
+				ID: 1,
+			},
+
+			statusCode: http.StatusInternalServerError,
+			err:        fmt.Errorf("internal error"),
+
+			mockFunc: func(banner banner_model.BannerUpdate, err error) {
+				dbMock.ExpectBeginTx(pgx.TxOptions{})
+				defer dbMock.ExpectRollback()
+
+				dbMock.ExpectExec("UPDATE banners").
+					WithArgs(banner.ID).
+					WillReturnError(err)
+
+			},
+		},
+		{
 			name:     "Forbidden",
 			path:     "/banner/1",
 			token:    "user_token",

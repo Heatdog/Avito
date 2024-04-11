@@ -186,11 +186,41 @@ func TestInsertBanner(t *testing.T) {
 					WithArgs(banner.Content, banner.IsActive).
 					WillReturnRows(row)
 
-				for _, tag := range banner.TagsID {
-					dbMock.ExpectExec("INSERT INTO features_tags_to_banners").
-						WithArgs(banner.FeatureID, tag, id).
-						WillReturnError(err)
-				}
+				dbMock.ExpectExec("INSERT INTO features_tags_to_banners").
+					WithArgs(banner.FeatureID, banner.TagsID[0], id).
+					WillReturnError(err)
+
+			},
+		},
+		{
+			name:  "internal error",
+			path:  "/banner",
+			token: "admin_token",
+			reqBanner: banner_model.BannerInsert{
+				TagsID:    []int{1, 2, 3},
+				FeatureID: 1,
+				Content: map[string]interface{}{
+					"title": "123",
+					"text":  "456",
+				},
+				IsActive: true,
+			},
+
+			bannerID: &RespID{
+				ID: 1,
+			},
+
+			statusCode: http.StatusInternalServerError,
+			err:        fmt.Errorf("internal error"),
+
+			mockFunc: func(banner banner_model.BannerInsert, id int, err error) {
+
+				dbMock.ExpectBeginTx(pgx.TxOptions{})
+				defer dbMock.ExpectRollback()
+
+				dbMock.ExpectQuery("INSERT INTO banners").
+					WithArgs(banner.Content, banner.IsActive).
+					WillReturnError(err)
 			},
 		},
 	}

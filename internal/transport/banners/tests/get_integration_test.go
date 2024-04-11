@@ -2,6 +2,7 @@ package banner_handler_test
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
@@ -35,7 +36,7 @@ func TestGetBanners(t *testing.T) {
 
 	opt := &slog.HandlerOptions{
 		AddSource: true,
-		Level:     slog.LevelError,
+		Level:     slog.LevelDebug,
 	}
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, opt))
 	slog.SetDefault(logger)
@@ -60,7 +61,7 @@ func TestGetBanners(t *testing.T) {
 		TagID     *int
 		FeatureID *int
 	}
-	type mockBehavior func(dbMock pgxmock.PgxPoolIface, banners []banner_model.Banner, params queryParams)
+	type mockBehavior func(dbMock pgxmock.PgxPoolIface, banners []banner_model.Banner, params queryParams, err error)
 
 	testTable := []struct {
 		name   string
@@ -107,7 +108,7 @@ func TestGetBanners(t *testing.T) {
 			statusCode: http.StatusOK,
 			err:        nil,
 
-			mockFunc: func(dbMock pgxmock.PgxPoolIface, banners []banner_model.Banner, params queryParams) {
+			mockFunc: func(dbMock pgxmock.PgxPoolIface, banners []banner_model.Banner, params queryParams, err error) {
 
 				rows := pgxmock.NewRows([]string{"id", "content_v1", "content_v2", "content_v3", "is_active",
 					"created_at", "updated_at"})
@@ -161,7 +162,7 @@ func TestGetBanners(t *testing.T) {
 			statusCode: http.StatusOK,
 			err:        nil,
 
-			mockFunc: func(dbMock pgxmock.PgxPoolIface, banners []banner_model.Banner, params queryParams) {
+			mockFunc: func(dbMock pgxmock.PgxPoolIface, banners []banner_model.Banner, params queryParams, err error) {
 
 				rows := pgxmock.NewRows([]string{"id", "content_v1", "content_v2", "content_v3", "is_active",
 					"created_at", "updated_at"})
@@ -215,7 +216,7 @@ func TestGetBanners(t *testing.T) {
 			statusCode: http.StatusOK,
 			err:        nil,
 
-			mockFunc: func(dbMock pgxmock.PgxPoolIface, banners []banner_model.Banner, params queryParams) {
+			mockFunc: func(dbMock pgxmock.PgxPoolIface, banners []banner_model.Banner, params queryParams, err error) {
 
 				rows := pgxmock.NewRows([]string{"id", "content_v1", "content_v2", "content_v3", "is_active",
 					"created_at", "updated_at"})
@@ -267,7 +268,7 @@ func TestGetBanners(t *testing.T) {
 			statusCode: http.StatusOK,
 			err:        nil,
 
-			mockFunc: func(dbMock pgxmock.PgxPoolIface, banners []banner_model.Banner, params queryParams) {
+			mockFunc: func(dbMock pgxmock.PgxPoolIface, banners []banner_model.Banner, params queryParams, err error) {
 
 				rows := pgxmock.NewRows([]string{"id", "content_v1", "content_v2", "content_v3", "is_active",
 					"created_at", "updated_at"})
@@ -320,7 +321,7 @@ func TestGetBanners(t *testing.T) {
 			statusCode: http.StatusOK,
 			err:        nil,
 
-			mockFunc: func(dbMock pgxmock.PgxPoolIface, banners []banner_model.Banner, params queryParams) {
+			mockFunc: func(dbMock pgxmock.PgxPoolIface, banners []banner_model.Banner, params queryParams, err error) {
 
 				rows := pgxmock.NewRows([]string{"id", "content_v1", "content_v2", "content_v3", "is_active",
 					"created_at", "updated_at"})
@@ -351,6 +352,25 @@ func TestGetBanners(t *testing.T) {
 			},
 		},
 		{
+			name:  "internal error",
+			path:  "/banner?tag_id=1",
+			token: "admin_token",
+			params: queryParams{
+				TagID: Int(1),
+			},
+
+			respBanners: nil,
+			statusCode:  http.StatusInternalServerError,
+			err:         fmt.Errorf("internal error"),
+
+			mockFunc: func(dbMock pgxmock.PgxPoolIface, banners []banner_model.Banner, params queryParams, err error) {
+				dbMock.ExpectQuery(`SELECT b.id, b.content_v1, b.content_v2, b.content_v3, b.is_active, b.created_at, 
+				b.updated_at FROM banners b JOIN features_tags_to_banners ftb`).
+					WithArgs(&params.TagID).
+					WillReturnError(err)
+			},
+		},
+		{
 			name:   "Unauthorized",
 			path:   "/banner?tag_id=1&feature_id=1&limit=1&offset=1",
 			params: queryParams{},
@@ -360,7 +380,7 @@ func TestGetBanners(t *testing.T) {
 			statusCode:  http.StatusUnauthorized,
 			err:         nil,
 
-			mockFunc: func(dbMock pgxmock.PgxPoolIface, banners []banner_model.Banner, params queryParams) {},
+			mockFunc: func(dbMock pgxmock.PgxPoolIface, banners []banner_model.Banner, params queryParams, err error) {},
 		},
 		{
 			name:   "Forbidden",
@@ -372,7 +392,7 @@ func TestGetBanners(t *testing.T) {
 			statusCode:  http.StatusForbidden,
 			err:         nil,
 
-			mockFunc: func(dbMock pgxmock.PgxPoolIface, banners []banner_model.Banner, params queryParams) {},
+			mockFunc: func(dbMock pgxmock.PgxPoolIface, banners []banner_model.Banner, params queryParams, err error) {},
 		},
 	}
 
@@ -383,7 +403,7 @@ func TestGetBanners(t *testing.T) {
 
 			r.Header.Set("token", testCase.token)
 
-			testCase.mockFunc(dbMock, testCase.respBanners, testCase.params)
+			testCase.mockFunc(dbMock, testCase.respBanners, testCase.params, testCase.err)
 
 			w := httptest.NewRecorder()
 
@@ -403,9 +423,19 @@ func TestGetBanners(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
+			} else {
+				if testCase.err != nil {
+					expected, err = json.Marshal(struct {
+						Err string `json:"error"`
+					}{
+						Err: testCase.err.Error(),
+					})
+					if err != nil {
+						t.Fatal(err)
+					}
+				}
 			}
 
-			require.Equal(t, testCase.err, err)
 			require.Equal(t, testCase.statusCode, w.Code)
 			require.Equal(t, string(expected), string(data))
 		})
