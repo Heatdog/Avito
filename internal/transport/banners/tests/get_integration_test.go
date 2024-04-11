@@ -23,7 +23,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func Int(i int) *int { return &i }
+func Int(i int) *int    { return &i }
+func Bool(b bool) *bool { return &b }
 
 func TestGetBanners(t *testing.T) {
 	dbMock, err := pgxmock.NewPool()

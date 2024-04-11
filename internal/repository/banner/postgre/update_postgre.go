@@ -66,44 +66,60 @@ func (repo *bannerRepository) UpdateBanner(ctx context.Context, banner *banner_m
 }
 
 func (repo *bannerRepository) updateOnlyBanner(ctx context.Context, tx pgx.Tx, banner *banner_model.BannerUpdate) error {
-	q := `
-		UPDATE banners
-	`
 	var tag pgconn.CommandTag
 	var err error
-	if banner.Content != nil {
 
-		q += " SET content_v1 = $1, content_v2 = content_v1, content_v3 = content_v2"
-		if banner.IsActive != nil {
-			q += ", is_active = $2, updated_at = now() WHERE id = $3"
-			repo.logger.Debug(q)
-
-			tag, err = tx.Exec(ctx, q, banner.Content, *banner.IsActive, banner.ID)
-		} else {
-			q += ", updated_at = now() WHERE id = $2"
-			repo.logger.Debug(q)
-
-			tag, err = tx.Exec(ctx, q, banner.Content, banner.ID)
+	check := func(tag pgconn.CommandTag, err error) error {
+		if err != nil {
+			return err
 		}
+		if tag.RowsAffected() != 1 {
+			return pgx.ErrNoRows
+		}
+		return nil
+	}
 
-	} else if banner.IsActive != nil {
-		q += " SET is_active = $1, updated_at = now() WHERE id = $2"
+	if banner.Content != nil && banner.IsActive != nil {
+		q := `UPDATE banners 
+			SET content_v1 = $1, content_v2 = content_v1, content_v3 = content_v2, 
+			is_active = $2, updated_at = now() 
+			WHERE id = $3
+			`
 		repo.logger.Debug(q)
+		tag, err = tx.Exec(ctx, q, banner.Content, *banner.IsActive, banner.ID)
+		return check(tag, err)
+	}
 
+	if banner.Content != nil && banner.IsActive == nil {
+		q := `UPDATE banners 
+			SET content_v1 = $1, content_v2 = content_v1, content_v3 = content_v2, updated_at = now() 
+			WHERE id = $2
+		`
+		repo.logger.Debug(q)
+		tag, err = tx.Exec(ctx, q, banner.Content, banner.ID)
+		return check(tag, err)
+	}
+
+	if banner.Content == nil && banner.IsActive != nil {
+		q := `UPDATE banners 
+			SET is_active = $1, updated_at = now() 
+			WHERE id = $2
+		`
+		repo.logger.Debug(q)
 		tag, err = tx.Exec(ctx, q, *banner.IsActive, banner.ID)
-	} else {
-		q += " SET updated_at = now() WHERE id = $1"
+		return check(tag, err)
+	}
+
+	if banner.Content == nil && banner.IsActive == nil {
+		q := `UPDATE banners 
+			SET updated_at = now() 
+			WHERE id = $1
+		`
 		repo.logger.Debug(q)
-
 		tag, err = tx.Exec(ctx, q, banner.ID)
+		return check(tag, err)
 	}
 
-	if err != nil {
-		return err
-	}
-	if tag.RowsAffected() != 1 {
-		return pgx.ErrNoRows
-	}
 	return nil
 }
 
