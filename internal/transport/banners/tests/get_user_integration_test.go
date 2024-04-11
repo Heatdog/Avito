@@ -37,7 +37,7 @@ func TestGetUserBanner(t *testing.T) {
 
 	opt := &slog.HandlerOptions{
 		AddSource: true,
-		Level:     slog.LevelInfo,
+		Level:     slog.LevelError,
 	}
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, opt))
 	slog.SetDefault(logger)

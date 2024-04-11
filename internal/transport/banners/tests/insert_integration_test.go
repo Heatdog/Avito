@@ -3,6 +3,7 @@ package banner_handler_test
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
@@ -20,6 +21,7 @@ import (
 	"github.com/Heatdog/Avito/pkg/token/simple_token"
 	"github.com/gorilla/mux"
 	"github.com/hashicorp/golang-lru/v2/expirable"
+	"github.com/jackc/pgx/v5"
 	"github.com/pashagolub/pgxmock/v2"
 	"github.com/stretchr/testify/require"
 )
@@ -33,7 +35,7 @@ func TestInsertBanner(t *testing.T) {
 
 	opt := &slog.HandlerOptions{
 		AddSource: true,
-		Level:     slog.LevelDebug,
+		Level:     slog.LevelError,
 	}
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, opt))
 	slog.SetDefault(logger)
@@ -58,7 +60,7 @@ func TestInsertBanner(t *testing.T) {
 		ID int `json:"banner_id"`
 	}
 
-	type mockBehavior func(banner banner_model.BannerInsert, id int)
+	type mockBehavior func(banner banner_model.BannerInsert, id int, err error)
 
 	testTable := []struct {
 		name      string
@@ -80,14 +82,9 @@ func TestInsertBanner(t *testing.T) {
 			reqBanner: banner_model.BannerInsert{
 				TagsID:    []int{1, 2, 3},
 				FeatureID: 1,
-				Content: struct {
-					Title string `json:"title"`
-					Text  string `json:"text"`
-					URL   string `json:"url"`
-				}{
-					Title: "123",
-					Text:  "456",
-					URL:   "765",
+				Content: map[string]interface{}{
+					"title": "123",
+					"text":  "456",
 				},
 				IsActive: true,
 			},
@@ -99,17 +96,100 @@ func TestInsertBanner(t *testing.T) {
 			statusCode: http.StatusCreated,
 			err:        nil,
 
-			mockFunc: func(banner banner_model.BannerInsert, id int) {
+			mockFunc: func(banner banner_model.BannerInsert, id int, err error) {
+				dbMock.ExpectBeginTx(pgx.TxOptions{})
+				defer dbMock.ExpectCommit()
+
 				row := pgxmock.NewRows([]string{"id"})
 				row.AddRow(id)
 
-				dbMock.ExpectQuery("INSERT INTO banners (content_v1, is_active)").
+				dbMock.ExpectQuery("INSERT INTO banners").
 					WithArgs(banner.Content, banner.IsActive).
 					WillReturnRows(row)
 
 				for _, tag := range banner.TagsID {
-					dbMock.ExpectExec("INSERT INTO features_tags_to_banners (feature_id, tag_id, banner_id)").
-						WithArgs(banner.FeatureID, tag, id)
+					dbMock.ExpectExec("INSERT INTO features_tags_to_banners").
+						WithArgs(banner.FeatureID, tag, id).
+						WillReturnResult(pgxmock.NewResult("INSERT", 1))
+				}
+			},
+		},
+		{
+			name:     "Forbidden",
+			path:     "/banner",
+			token:    "user_token",
+			bannerID: nil,
+
+			statusCode: http.StatusForbidden,
+			err:        nil,
+
+			mockFunc: func(banner banner_model.BannerInsert, id int, err error) {},
+		},
+		{
+			name:     "Unauthorized",
+			path:     "/banner",
+			token:    "123",
+			bannerID: nil,
+
+			statusCode: http.StatusUnauthorized,
+			err:        nil,
+
+			mockFunc: func(banner banner_model.BannerInsert, id int, err error) {},
+		},
+		{
+			name:     "validation error",
+			path:     "/banner",
+			token:    "admin_token",
+			bannerID: nil,
+			reqBanner: banner_model.BannerInsert{
+				TagsID:    []int{1, 2, 3},
+				FeatureID: 1,
+				Content:   "13231",
+				IsActive:  true,
+			},
+
+			statusCode: http.StatusBadRequest,
+			err:        fmt.Errorf(`Key: 'BannerInsert.Content' Error:Field validation for 'Content' failed on the 'json' tag`),
+
+			mockFunc: func(banner banner_model.BannerInsert, id int, err error) {},
+		},
+		{
+			name:  "dublication error",
+			path:  "/banner",
+			token: "admin_token",
+			reqBanner: banner_model.BannerInsert{
+				TagsID:    []int{1, 2, 3},
+				FeatureID: 1,
+				Content: map[string]interface{}{
+					"title": "123",
+					"text":  "456",
+				},
+				IsActive: true,
+			},
+
+			bannerID: &RespID{
+				ID: 1,
+			},
+
+			statusCode: http.StatusInternalServerError,
+			err:        fmt.Errorf("ERROR: duplicate key value violates unique constraint \"features_tags_to_banners_pk\" (SQLSTATE 23505)"),
+
+			mockFunc: func(banner banner_model.BannerInsert, id int, err error) {
+
+				dbMock.ExpectBeginTx(pgx.TxOptions{})
+				defer dbMock.ExpectRollback()
+
+				row := pgxmock.NewRows([]string{"id"})
+				row.AddRow(id)
+
+				dbMock.ExpectQuery("INSERT INTO banners").
+					WithArgs(banner.Content, banner.IsActive).
+					WillReturnRows(row)
+
+				for _, tag := range banner.TagsID {
+					dbMock.ExpectExec("INSERT INTO features_tags_to_banners").
+						WithArgs(banner.FeatureID, tag, id).
+						WillReturnError(err)
 				}
 			},
 		},
@@ -123,13 +203,13 @@ func TestInsertBanner(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			testCase.reqBanner.Content = body
-
 			r := httptest.NewRequest(http.MethodPost, testCase.path, bytes.NewBuffer(body))
 
 			r.Header.Set("token", testCase.token)
 
-			testCase.mockFunc(testCase.reqBanner, testCase.bannerID.ID)
+			if testCase.bannerID != nil {
+				testCase.mockFunc(testCase.reqBanner, testCase.bannerID.ID, testCase.err)
+			}
 
 			w := httptest.NewRecorder()
 
@@ -144,7 +224,7 @@ func TestInsertBanner(t *testing.T) {
 			}
 
 			var expected []byte
-			if testCase.bannerID != nil {
+			if testCase.bannerID != nil && testCase.err == nil {
 				expected, err = json.Marshal(testCase.bannerID)
 				if err != nil {
 					t.Fatal(err)
