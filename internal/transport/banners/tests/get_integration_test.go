@@ -36,7 +36,7 @@ func TestGetBanners(t *testing.T) {
 
 	opt := &slog.HandlerOptions{
 		AddSource: true,
-		Level:     slog.LevelDebug,
+		Level:     slog.LevelError,
 	}
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, opt))
 	slog.SetDefault(logger)
@@ -121,19 +121,14 @@ func TestGetBanners(t *testing.T) {
 				b.updated_at FROM banners b`).
 					WillReturnRows(rows)
 
-				var tagFeature []*pgxmock.Rows
 				for _, banner := range banners {
 					bannerRows := pgxmock.NewRows([]string{"feature_id", "tag_id"})
 					for _, tag := range banner.TagsID {
 						bannerRows.AddRow(banner.FeatureID, tag)
 					}
-					tagFeature = append(tagFeature, bannerRows)
-				}
-
-				for i, banner := range banners {
 					dbMock.ExpectQuery("SELECT feature_id, tag_id FROM features_tags_to_banners WHERE banner_id").
 						WithArgs(banner.ID).
-						WillReturnRows(tagFeature[i])
+						WillReturnRows(bannerRows)
 				}
 			},
 		},

@@ -127,6 +127,39 @@ func TestMultyDeleteBanner(t *testing.T) {
 			},
 		},
 		{
+			name:  "tag only",
+			path:  "/banner",
+			token: "admin_token",
+
+			params: &query_params.DeleteBannerParams{
+				TagID: Int(1),
+			},
+			deletedBanners: []int{1, 2, 3},
+
+			statusCode: http.StatusAccepted,
+			err:        nil,
+
+			mockFunc: func(params *query_params.DeleteBannerParams, deletedBanners []int, err error) {
+				dbMock.ExpectBeginTx(pgx.TxOptions{})
+				defer dbMock.ExpectCommit()
+
+				rows := pgxmock.NewRows([]string{"banner_id"})
+				for _, id := range deletedBanners {
+					rows.AddRow(id)
+				}
+
+				dbMock.ExpectQuery("SELECT banner_id FROM features_tags_to_banners").
+					WithArgs(*params.TagID).
+					WillReturnRows(rows)
+
+				for _, id := range deletedBanners {
+					dbMock.ExpectExec("DELETE FROM banners").
+						WithArgs(id).
+						WillReturnResult(pgxmock.NewResult("DELETE", 1))
+				}
+			},
+		},
+		{
 			name:  "Forbidden",
 			path:  "/banner",
 			token: "user_token",

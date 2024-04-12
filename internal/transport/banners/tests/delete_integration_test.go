@@ -20,6 +20,7 @@ import (
 	"github.com/Heatdog/Avito/pkg/token/simple_token"
 	"github.com/gorilla/mux"
 	"github.com/hashicorp/golang-lru/v2/expirable"
+	"github.com/jackc/pgx/v5"
 	"github.com/pashagolub/pgxmock/v2"
 	"github.com/stretchr/testify/require"
 )
@@ -78,6 +79,8 @@ func TestDeleteBanner(t *testing.T) {
 			err:        nil,
 
 			mockFunc: func(id int, err error) {
+				dbMock.ExpectBeginTx(pgx.TxOptions{})
+				defer dbMock.ExpectCommit()
 
 				dbMock.ExpectExec("DELETE FROM banners").
 					WithArgs(id).
@@ -116,6 +119,9 @@ func TestDeleteBanner(t *testing.T) {
 			err:        nil,
 
 			mockFunc: func(id int, err error) {
+				dbMock.ExpectBeginTx(pgx.TxOptions{})
+				defer dbMock.ExpectCommit()
+
 				dbMock.ExpectExec("DELETE FROM banners").
 					WithArgs(id).
 					WillReturnResult(pgxmock.NewResult("DELETE", 0))
@@ -131,6 +137,9 @@ func TestDeleteBanner(t *testing.T) {
 			err:        fmt.Errorf("internal error"),
 
 			mockFunc: func(id int, err error) {
+				dbMock.ExpectBeginTx(pgx.TxOptions{})
+				defer dbMock.ExpectRollback()
+
 				dbMock.ExpectExec("DELETE FROM banners").
 					WithArgs(id).
 					WillReturnError(err)

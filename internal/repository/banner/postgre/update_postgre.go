@@ -15,30 +15,26 @@ func (repo *bannerRepository) UpdateBanner(ctx context.Context, banner *banner_m
 
 	tx, err := repo.dbClient.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
+		repo.logger.Warn(err.Error())
 		return err
 	}
-	defer func() {
-		if err != nil {
-			repo.logger.Warn(err.Error())
-			tx.Rollback(ctx)
-		} else {
-			repo.logger.Debug("commit")
-			tx.Commit(ctx)
-		}
-	}()
+	defer tx.Rollback(ctx)
 
 	err = repo.updateOnlyBanner(ctx, tx, banner)
 	if err != nil {
+		repo.logger.Warn(err.Error())
 		return err
 	}
 
 	if banner.FeatureID != nil || banner.TagsID != nil {
 		params, err := repo.GetBannerParams(ctx, banner.ID)
 		if err != nil {
+			repo.logger.Warn(err.Error())
 			return err
 		}
 
 		if err = repo.deleteCrossTable(ctx, tx, banner.ID); err != nil {
+			repo.logger.Warn(err.Error())
 			return err
 		}
 
@@ -57,9 +53,13 @@ func (repo *bannerRepository) UpdateBanner(ctx context.Context, banner *banner_m
 		}
 
 		if err = repo.insertCrossTable(ctx, tx, feauterId, banner.ID, tagsIDs); err != nil {
+			repo.logger.Warn(err.Error())
 			return err
 		}
-
+	}
+	if err = tx.Commit(ctx); err != nil {
+		repo.logger.Warn(err.Error())
+		return err
 	}
 
 	return nil

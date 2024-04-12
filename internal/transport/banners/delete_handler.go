@@ -77,6 +77,6 @@ func (handler *bannersHandler) deleteBannerOnTagOrFeature(w http.ResponseWriter,
 	}
 
 	handler.logger.Debug("params", slog.Any("params", params))
-	go handler.service.DeleteBanners(context.Background(), &params)
+	go handler.service.DeleteBanners(context.Background(), params)
 	w.WriteHeader(http.StatusAccepted)
 }

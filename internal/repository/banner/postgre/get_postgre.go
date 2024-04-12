@@ -47,6 +47,14 @@ func (repo *bannerRepository) GetBanners(ctx context.Context, params *query_para
 	var res []banner_model.Banner
 
 	for _, banner := range banners {
+		res = append(res, banner)
+	}
+
+	sort.Slice(res, func(i, j int) bool {
+		return res[i].UpdatedAt.Before(res[j].UpdatedAt)
+	})
+
+	for i, banner := range res {
 
 		bannerParams, err := repo.GetBannerParams(ctx, banner.ID)
 		if err != nil {
@@ -54,15 +62,9 @@ func (repo *bannerRepository) GetBanners(ctx context.Context, params *query_para
 			return nil, err
 		}
 
-		banner = banners[banner.ID]
-		banner.FeatureID = bannerParams.FeatureID
-		banner.TagsID = bannerParams.TagIDs
-		res = append(res, banner)
+		res[i].FeatureID = bannerParams.FeatureID
+		res[i].TagsID = bannerParams.TagIDs
 	}
-
-	sort.Slice(res, func(i, j int) bool {
-		return res[i].UpdatedAt.Before(res[i].UpdatedAt)
-	})
 
 	return res, nil
 }

@@ -9,83 +9,97 @@ import (
 )
 
 func (repo *bannerRepository) DeleteBanner(ctx context.Context, id int) (bool, error) {
-	q := `
-		DELETE FROM banners
-		WHERE id = $1
-	`
-	repo.logger.Debug("repo query", slog.String("query", q))
-
-	tag, err := repo.dbClient.Exec(ctx, q, id)
+	tx, err := repo.dbClient.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
 		repo.logger.Warn(err.Error())
 		return false, err
 	}
+	defer tx.Rollback(ctx)
 
-	if tag.RowsAffected() < 1 {
-		return false, nil
+	res, err := repo.deleteBanner(ctx, tx, id)
+	if err != nil {
+		repo.logger.Warn(err.Error())
+		return false, err
 	}
-	return true, nil
+	if err = tx.Commit(ctx); err != nil {
+		repo.logger.Warn(err.Error())
+		return false, err
+	}
+	return res, nil
 }
 
-func (repo *bannerRepository) DeleteBanners(ctx context.Context, params *query_params.DeleteBannerParams) error {
+func (repo *bannerRepository) DeleteBanners(ctx context.Context, params query_params.DeleteBannerParams) error {
 	tx, err := repo.dbClient.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
-		repo.logger.Warn("tx begin error", tx)
+		repo.logger.Warn(err.Error())
 		return err
 	}
-	defer func() {
-		if err != nil {
-			repo.logger.Warn(err.Error())
-			tx.Rollback(ctx)
-		} else {
-			repo.logger.Debug("commit")
-			tx.Commit(ctx)
-		}
-	}()
+	defer tx.Rollback(ctx)
 
-	bannersID, err := repo.getBannersID(ctx, params)
+	bannersID, err := repo.getBannersID(ctx, tx, &params)
 	if err != nil {
+		repo.logger.Warn(err.Error())
 		return err
 	}
 
 	for _, id := range bannersID {
-		if _, err := repo.DeleteBanner(ctx, id); err != nil {
+		if _, err := repo.deleteBanner(ctx, tx, id); err != nil {
+			repo.logger.Warn(err.Error())
 			return err
 		}
+	}
+	if err = tx.Commit(ctx); err != nil {
+		repo.logger.Warn(err.Error())
+		return err
 	}
 	return nil
 }
 
-func (repo *bannerRepository) getBannersID(ctx context.Context, params *query_params.DeleteBannerParams) ([]int, error) {
-	q := `
-		SELECT banner_id
-		FROM features_tags_to_banners
-		WHERE
-	`
+func (repo *bannerRepository) getBannersID(ctx context.Context, tx pgx.Tx, params *query_params.DeleteBannerParams) ([]int, error) {
 	var res []int
 	var rows pgx.Rows
 	var err error
 	if params.FeatureID != nil && params.TagID != nil {
+		q := `
+			SELECT banner_id
+			FROM features_tags_to_banners
+			WHERE tag_id = $1 OR feature_id = $2
+			`
 
-		q += " tag_id = $1 OR feature_id = $2"
-		rows, err = repo.dbClient.Query(ctx, q, params.TagID, params.FeatureID)
+		rows, err = tx.Query(ctx, q, params.TagID, params.FeatureID)
+
+		if err != nil {
+			return nil, err
+		}
 
 	} else if params.FeatureID != nil {
+		q := `
+			SELECT banner_id
+			FROM features_tags_to_banners
+			WHERE feature_id = $1
+			`
 
-		q += " feature_id = $1"
-		rows, err = repo.dbClient.Query(ctx, q, params.FeatureID)
+		rows, err = tx.Query(ctx, q, params.FeatureID)
+
+		if err != nil {
+			return nil, err
+		}
 
 	} else if params.TagID != nil {
+		q := `
+			SELECT banner_id
+			FROM features_tags_to_banners
+			WHERE tag_id = $1
+			`
 
-		q += " tag_id = $1"
-		rows, err = repo.dbClient.Query(ctx, q, params.TagID)
+		rows, err = tx.Query(ctx, q, params.TagID)
+
+		if err != nil {
+			return nil, err
+		}
 
 	} else {
 		return res, nil
-	}
-
-	if err != nil {
-		return nil, err
 	}
 
 	for rows.Next() {
@@ -96,4 +110,23 @@ func (repo *bannerRepository) getBannersID(ctx context.Context, params *query_pa
 		res = append(res, id)
 	}
 	return res, nil
+}
+
+func (repo *bannerRepository) deleteBanner(ctx context.Context, tx pgx.Tx, id int) (bool, error) {
+	q := `
+		DELETE FROM banners
+		WHERE id = $1
+	`
+	repo.logger.Debug("repo query", slog.String("query", q))
+
+	tag, err := tx.Exec(ctx, q, id)
+	if err != nil {
+		repo.logger.Warn(err.Error())
+		return false, err
+	}
+
+	if tag.RowsAffected() < 1 {
+		return false, nil
+	}
+	return true, nil
 }

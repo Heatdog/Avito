@@ -18,15 +18,7 @@ func (repo *bannerRepository) InsertBanner(ctx context.Context, banner *banner_m
 		repo.logger.Error(err.Error())
 		return 0, err
 	}
-	defer func() {
-		if err != nil {
-			repo.logger.Debug("rollback")
-			transaction.Rollback(ctx)
-		} else {
-			repo.logger.Debug("commit")
-			transaction.Commit(ctx)
-		}
-	}()
+	defer transaction.Rollback(ctx)
 
 	repo.logger.Debug("insert banner", slog.Any("banner", banner))
 
@@ -37,6 +29,10 @@ func (repo *bannerRepository) InsertBanner(ctx context.Context, banner *banner_m
 	}
 
 	if err = repo.insertCrossTable(ctx, transaction, banner.FeatureID, id, banner.TagsID); err != nil {
+		repo.logger.Warn(err.Error())
+		return 0, err
+	}
+	if err = transaction.Commit(ctx); err != nil {
 		repo.logger.Warn(err.Error())
 		return 0, err
 	}
