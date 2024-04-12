@@ -18,7 +18,11 @@ func (repo *bannerRepository) UpdateBanner(ctx context.Context, banner *banner_m
 		repo.logger.Warn(err.Error())
 		return err
 	}
-	defer tx.Rollback(ctx)
+	defer func() {
+		if err := tx.Rollback(ctx); err != nil {
+			repo.logger.Warn(err.Error())
+		}
+	}()
 
 	err = repo.updateOnlyBanner(ctx, tx, banner)
 	if err != nil {

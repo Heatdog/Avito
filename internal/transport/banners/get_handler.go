@@ -8,6 +8,7 @@ import (
 	_ "github.com/Heatdog/Avito/internal/models/banner"
 	"github.com/Heatdog/Avito/internal/models/query_params"
 	"github.com/Heatdog/Avito/internal/transport"
+	middleware_transport "github.com/Heatdog/Avito/internal/transport/middleware"
 	"github.com/go-playground/validator/v10"
 	"github.com/jackc/pgx/v5"
 )
@@ -33,7 +34,7 @@ import (
 func (handler *bannersHandler) getUserBanner(w http.ResponseWriter, r *http.Request) {
 	handler.logger.Debug("get user banner handler")
 
-	token := r.Context().Value("token").(string)
+	token := r.Context().Value(middleware_transport.ContextKey{Key: "token"}).(string)
 	handler.logger.Debug("token header", slog.String("token", token))
 
 	params := query_params.BannerUserParams{

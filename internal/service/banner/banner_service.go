@@ -82,10 +82,16 @@ func (service *bannerService) GetUserBanner(ctx context.Context,
 	if !banner.IsActive && !service.tokenProvider.VerifyOnAdmin(params.Token) {
 		return "", pgx.ErrNoRows
 	}
-	go service.cache.Add(context.Background(), banner_model.BannerKey{
+	go func(logger *slog.Logger, key banner_model.BannerKey, banner banner_model.Banner) {
+
+		if _, err := service.cache.Add(context.Background(), key, &banner); err != nil {
+			logger.Warn(err.Error())
+		}
+
+	}(service.logger, banner_model.BannerKey{
 		TagID:     params.TagID,
 		FeatureID: params.FeatureID,
-	}, &banner)
+	}, banner)
 
 	switch params.Version {
 	case "1":
@@ -103,29 +109,54 @@ func (service *bannerService) GetBanners(context context.Context, params *query_
 	error) {
 
 	service.logger.Debug("get banners")
-	return service.repo.GetBanners(context, params)
+
+	res, err := service.repo.GetBanners(context, params)
+	if err != nil {
+		service.logger.Warn(err.Error())
+		return nil, err
+	}
+
+	return res, err
 }
 
 func (service *bannerService) DeleteBanner(context context.Context, id int) (bool, error) {
 	service.logger.Debug("delete banner", slog.Int("id", id))
 
-	return service.repo.DeleteBanner(context, id)
+	res, err := service.repo.DeleteBanner(context, id)
+	if err != nil {
+		service.logger.Warn(err.Error())
+		return false, err
+	}
+
+	return res, err
 }
 
 func (service *bannerService) UpdateBanner(context context.Context, banner *banner_model.BannerUpdate) error {
 	service.logger.Debug("update banner", slog.Int("id", banner.ID))
 
-	return service.repo.UpdateBanner(context, banner)
+	if err := service.repo.UpdateBanner(context, banner); err != nil {
+		service.logger.Warn(err.Error())
+		return err
+	}
+
+	return nil
 }
 
 func (service *bannerService) DeleteBanners(context context.Context, params query_params.DeleteBannerParams) {
 	service.logger.Debug("delete banner params", slog.Any("params", params))
 
-	service.repo.DeleteBanners(context, params)
+	if err := service.repo.DeleteBanners(context, params); err != nil {
+		service.logger.Warn(err.Error())
+	}
 }
 
 func (service *bannerService) UpdateBannerVersion(context context.Context, id, version int) error {
 	service.logger.Debug("update banner", slog.Int("id", id), slog.Int("version", version))
 
-	return service.repo.UpdateBannerVersion(context, id, version)
+	if err := service.repo.UpdateBannerVersion(context, id, version); err != nil {
+		service.logger.Warn(err.Error())
+		return err
+	}
+
+	return nil
 }

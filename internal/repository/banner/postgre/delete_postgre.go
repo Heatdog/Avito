@@ -14,7 +14,11 @@ func (repo *bannerRepository) DeleteBanner(ctx context.Context, id int) (bool, e
 		repo.logger.Warn(err.Error())
 		return false, err
 	}
-	defer tx.Rollback(ctx)
+	defer func() {
+		if err := tx.Rollback(ctx); err != nil {
+			repo.logger.Warn(err.Error())
+		}
+	}()
 
 	res, err := repo.deleteBanner(ctx, tx, id)
 	if err != nil {
@@ -34,7 +38,11 @@ func (repo *bannerRepository) DeleteBanners(ctx context.Context, params query_pa
 		repo.logger.Warn(err.Error())
 		return err
 	}
-	defer tx.Rollback(ctx)
+	defer func() {
+		if err := tx.Rollback(ctx); err != nil {
+			repo.logger.Warn(err.Error())
+		}
+	}()
 
 	bannersID, err := repo.getBannersID(ctx, tx, &params)
 	if err != nil {

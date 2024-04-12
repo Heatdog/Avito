@@ -18,7 +18,7 @@
 * /banner/{id} [patch] - если поле content не пустое, то оно смещает предыдущие значения полей content: v1->v2, v2->v3.
 * /banerr/{id}/{version} [patch] - версия v становиться основной у баннера id.
 - [x] 4. Метод вызывается асинхронно, при этом пользователю возвращается статус код 202.
-- [x] 5. Проедены интеграционные тесты для всех endpoints. Используемый пакет для мока PostgreSQL - github.com/pashagolub/pgxmock/v2
+- [x] 5. Проведены интеграционные [тесты](internal/transport/banners/tests/) для всех endpoints. Используемый пакет для мока PostgreSQL - github.com/pashagolub/pgxmock/v2.
 - [x] 6.
 
 [Примеры запросов](/examples/). Curl сгенерированы через Swagger.

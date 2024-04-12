@@ -61,9 +61,14 @@ func (handler *bannersHandler) updateBanner(w http.ResponseWriter, r *http.Reque
 
 	handler.logger.Debug("validate request body", slog.Any("banner", banner))
 	validate := validator.New(validator.WithRequiredStructEnabled())
-	validate.RegisterValidation("json", banner_model.ValidateJson)
+
+	if err = validate.RegisterValidation("json", banner_model.ValidateJson); err != nil {
+		handler.logger.Warn(err.Error())
+		transport.ResponseWriteError(w, http.StatusBadRequest, err.Error(), handler.logger)
+		return
+	}
 	if err = validate.Struct(banner); err != nil {
-		handler.logger.Debug(err.Error())
+		handler.logger.Warn(err.Error())
 		transport.ResponseWriteError(w, http.StatusBadRequest, err.Error(), handler.logger)
 		return
 	}

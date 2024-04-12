@@ -21,6 +21,10 @@ func NewMiddleware(logger *slog.Logger, tokenProvider token.TokenProvider) *Midd
 	}
 }
 
+type ContextKey struct {
+	Key string
+}
+
 func (mid *Middleware) Auth(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		token := r.Header.Get("token")
@@ -39,14 +43,14 @@ func (mid *Middleware) Auth(next http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 
-		ctx := context.WithValue(r.Context(), "token", token)
+		ctx := context.WithValue(r.Context(), ContextKey{Key: "token"}, token)
 		next(w, r.WithContext(ctx))
 	}
 }
 
 func (mid *Middleware) AdminAuth(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		token := r.Context().Value("token")
+		token := r.Context().Value(ContextKey{Key: "token"})
 		if token == nil {
 			mid.logger.Debug("empty token")
 			w.WriteHeader(http.StatusUnauthorized)

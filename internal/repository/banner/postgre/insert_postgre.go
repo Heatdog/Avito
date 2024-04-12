@@ -18,7 +18,11 @@ func (repo *bannerRepository) InsertBanner(ctx context.Context, banner *banner_m
 		repo.logger.Error(err.Error())
 		return 0, err
 	}
-	defer transaction.Rollback(ctx)
+	defer func() {
+		if err := transaction.Rollback(ctx); err != nil {
+			repo.logger.Warn(err.Error())
+		}
+	}()
 
 	repo.logger.Debug("insert banner", slog.Any("banner", banner))
 

@@ -197,10 +197,12 @@ func TestGetUserBanner(t *testing.T) {
 
 			mockFunc: func(banner *banner_model.Banner, params query_params.BannerUserParams, err error) {
 				for _, tag := range banner.TagsID {
-					cache.Add(context.Background(), banner_model.BannerKey{
+					if _, err := cache.Add(context.Background(), banner_model.BannerKey{
 						TagID:     strconv.Itoa(tag),
 						FeatureID: strconv.Itoa(banner.FeatureID),
-					}, banner)
+					}, banner); err != nil {
+						return
+					}
 				}
 			},
 		},
