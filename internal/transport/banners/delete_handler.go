@@ -1,4 +1,4 @@
-package banners_transport
+package bannerstransport
 
 import (
 	"context"
@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/Heatdog/Avito/internal/models/query_params"
+	"github.com/Heatdog/Avito/internal/models/queryparams"
 	"github.com/Heatdog/Avito/internal/transport"
 	"github.com/gorilla/mux"
 )
@@ -27,11 +27,11 @@ import (
 // @Failure 500 {object} transport.RespWriterError Внутренняя ошибка сервера
 // @Router /banner/{id} [delete]
 func (handler *bannersHandler) deleteBanner(w http.ResponseWriter, r *http.Request) {
-
 	id, err := strconv.Atoi(mux.Vars(r)["id"])
 	if err != nil {
 		handler.logger.Debug(err.Error())
 		transport.ResponseWriteError(w, http.StatusBadRequest, err.Error(), handler.logger)
+
 		return
 	}
 
@@ -41,11 +41,14 @@ func (handler *bannersHandler) deleteBanner(w http.ResponseWriter, r *http.Reque
 	if err != nil {
 		handler.logger.Warn(err.Error())
 		transport.ResponseWriteError(w, http.StatusInternalServerError, err.Error(), handler.logger)
+
 		return
 	}
+
 	if !ok {
 		handler.logger.Debug("banner not found")
 		w.WriteHeader(http.StatusNotFound)
+
 		return
 	}
 
@@ -64,15 +67,16 @@ func (handler *bannersHandler) deleteBanner(w http.ResponseWriter, r *http.Reque
 // @Success 202 {object} nil Принято
 // @Router /banner [delete]
 func (handler *bannersHandler) deleteBannerOnTagOrFeature(w http.ResponseWriter, r *http.Request) {
-
 	handler.logger.Debug("read request query params")
-	tagIdStr := r.URL.Query().Get("tag_id")
-	featureIdStr := r.URL.Query().Get("feature_id")
 
-	params, err := query_params.ValidateDeleteBannerParams(tagIdStr, featureIdStr)
+	tagIDStr := r.URL.Query().Get("tag_id")
+	featureIDStr := r.URL.Query().Get("feature_id")
+
+	params, err := queryparams.ValidateDeleteBannerParams(tagIDStr, featureIDStr)
 	if err != nil {
 		handler.logger.Debug(err.Error())
 		transport.ResponseWriteError(w, http.StatusBadRequest, err.Error(), handler.logger)
+
 		return
 	}
 

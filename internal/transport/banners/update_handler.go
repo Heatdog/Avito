@@ -1,4 +1,4 @@
-package banners_transport
+package bannerstransport
 
 import (
 	"encoding/json"
@@ -32,11 +32,11 @@ import (
 // @Failure 500 {object} transport.RespWriterError Внутренняя ошибка сервера
 // @Router /banner/{id} [patch]
 func (handler *bannersHandler) updateBanner(w http.ResponseWriter, r *http.Request) {
-
 	id, err := strconv.Atoi(mux.Vars(r)["id"])
 	if err != nil {
 		handler.logger.Debug(err.Error())
 		transport.ResponseWriteError(w, http.StatusBadRequest, err.Error(), handler.logger)
+
 		return
 	}
 
@@ -44,45 +44,57 @@ func (handler *bannersHandler) updateBanner(w http.ResponseWriter, r *http.Reque
 	if err != nil {
 		handler.logger.Debug(err.Error())
 		transport.ResponseWriteError(w, http.StatusBadRequest, err.Error(), handler.logger)
+
 		return
 	}
 	defer r.Body.Close()
 
 	handler.logger.Debug("update banner handler", slog.Int("id", id), slog.String("body", string(body)))
 	handler.logger.Debug("unmarshaling request body")
+
 	var banner banner_model.BannerUpdate
 
 	if err := json.Unmarshal(body, &banner); err != nil {
 		handler.logger.Debug(err.Error())
 		transport.ResponseWriteError(w, http.StatusBadRequest, err.Error(), handler.logger)
+
 		return
 	}
+
 	banner.ID = id
 
 	handler.logger.Debug("validate request body", slog.Any("banner", banner))
+
 	validate := validator.New(validator.WithRequiredStructEnabled())
 
-	if err = validate.RegisterValidation("json", banner_model.ValidateJson); err != nil {
+	if err = validate.RegisterValidation("json", banner_model.ValidateJSON); err != nil {
 		handler.logger.Warn(err.Error())
 		transport.ResponseWriteError(w, http.StatusBadRequest, err.Error(), handler.logger)
+
 		return
 	}
+
 	if err = validate.Struct(banner); err != nil {
 		handler.logger.Warn(err.Error())
 		transport.ResponseWriteError(w, http.StatusBadRequest, err.Error(), handler.logger)
+
 		return
 	}
+
 	handler.logger.Debug("valid successful")
 
 	err = handler.service.UpdateBanner(r.Context(), &banner)
 	if err == pgx.ErrNoRows {
 		handler.logger.Debug(err.Error())
 		w.WriteHeader(http.StatusNotFound)
+
 		return
 	}
+
 	if err != nil {
 		handler.logger.Debug(err.Error())
 		transport.ResponseWriteError(w, http.StatusInternalServerError, err.Error(), handler.logger)
+
 		return
 	}
 
@@ -107,11 +119,11 @@ func (handler *bannersHandler) updateBanner(w http.ResponseWriter, r *http.Reque
 // @Failure 500 {object} transport.RespWriterError Внутренняя ошибка сервера
 // @Router /banner/{id}/{version} [patch]
 func (handler *bannersHandler) updateBannerVersion(w http.ResponseWriter, r *http.Request) {
-
 	id, err := strconv.Atoi(mux.Vars(r)["id"])
 	if err != nil {
 		handler.logger.Debug(err.Error())
 		transport.ResponseWriteError(w, http.StatusBadRequest, err.Error(), handler.logger)
+
 		return
 	}
 
@@ -119,12 +131,15 @@ func (handler *bannersHandler) updateBannerVersion(w http.ResponseWriter, r *htt
 	if err != nil {
 		handler.logger.Debug(err.Error())
 		transport.ResponseWriteError(w, http.StatusBadRequest, err.Error(), handler.logger)
+
 		return
 	}
+
 	if version < 1 || version > 3 {
 		err = fmt.Errorf("bad version")
 		handler.logger.Debug(err.Error())
 		transport.ResponseWriteError(w, http.StatusBadRequest, err.Error(), handler.logger)
+
 		return
 	}
 
@@ -134,11 +149,14 @@ func (handler *bannersHandler) updateBannerVersion(w http.ResponseWriter, r *htt
 	if err == pgx.ErrNoRows {
 		handler.logger.Debug(err.Error())
 		w.WriteHeader(http.StatusNotFound)
+
 		return
 	}
+
 	if err != nil {
 		handler.logger.Debug(err.Error())
 		transport.ResponseWriteError(w, http.StatusInternalServerError, err.Error(), handler.logger)
+
 		return
 	}
 

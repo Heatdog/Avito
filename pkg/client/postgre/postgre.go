@@ -11,9 +11,10 @@ import (
 )
 
 func NewPostgreClient(ctx context.Context, cfg config.PostgreSettings) (client.Client, error) {
-	time.Sleep(5 * time.Second)
+	time.Sleep(time.Duration(cfg.TimePrepare) * time.Second)
 	dsn := fmt.Sprintf("postgresql://%s:%s@%s:%d/%s", cfg.Username, cfg.Password, cfg.Host, cfg.Port, cfg.Database)
-	ctx, cancel := context.WithTimeout(ctx, 12*time.Second)
+
+	ctx, cancel := context.WithTimeout(ctx, time.Duration(cfg.TimeWait)*time.Second)
 	defer cancel()
 
 	conn, err := pgxpool.New(ctx, dsn)
@@ -21,8 +22,9 @@ func NewPostgreClient(ctx context.Context, cfg config.PostgreSettings) (client.C
 		return nil, err
 	}
 
-	if err = conn.Ping(ctx); err != nil {
+	if err := conn.Ping(ctx); err != nil {
 		return nil, err
 	}
+
 	return conn, nil
 }

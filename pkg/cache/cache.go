@@ -2,7 +2,7 @@ package cache
 
 import "context"
 
-type CacheKey struct {
+type Key struct {
 	TagID     int
 	FeatureID int
 }

@@ -1,4 +1,4 @@
-package middleware_transport
+package middlewaretransport
 
 import (
 	"context"
@@ -11,10 +11,10 @@ import (
 
 type Middleware struct {
 	logger        *slog.Logger
-	tokenProvider token.TokenProvider
+	tokenProvider token.Provider
 }
 
-func NewMiddleware(logger *slog.Logger, tokenProvider token.TokenProvider) *Middleware {
+func NewMiddleware(logger *slog.Logger, tokenProvider token.Provider) *Middleware {
 	return &Middleware{
 		logger:        logger,
 		tokenProvider: tokenProvider,
@@ -34,12 +34,14 @@ func (mid *Middleware) Auth(next http.HandlerFunc) http.HandlerFunc {
 		if token == "" {
 			mid.logger.Debug("token is empty")
 			w.WriteHeader(http.StatusUnauthorized)
+
 			return
 		}
 
 		if !mid.tokenProvider.VerifyToken(token) {
 			mid.logger.Debug("token incorrect")
 			w.WriteHeader(http.StatusUnauthorized)
+
 			return
 		}
 
@@ -54,13 +56,16 @@ func (mid *Middleware) AdminAuth(next http.HandlerFunc) http.HandlerFunc {
 		if token == nil {
 			mid.logger.Debug("empty token")
 			w.WriteHeader(http.StatusUnauthorized)
+
 			return
 		}
 
 		mid.logger.Debug("token", token)
+
 		if !mid.tokenProvider.VerifyOnAdmin(token.(string)) {
 			mid.logger.Debug("not admin token")
 			w.WriteHeader(http.StatusForbidden)
+
 			return
 		}
 

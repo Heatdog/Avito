@@ -1,4 +1,4 @@
-package simple_token
+package simpletoken
 
 import "github.com/Heatdog/Avito/pkg/token"
 
@@ -7,16 +7,16 @@ const (
 	adminToken = "admin_token"
 )
 
-type SimpleTokenProvider struct{}
+type Provider struct{}
 
-func NewSimpleTokenProvider() token.TokenProvider {
-	return &SimpleTokenProvider{}
+func NewSimpleTokenProvider() token.Provider {
+	return &Provider{}
 }
 
-func (provider SimpleTokenProvider) VerifyToken(token string) bool {
+func (provider Provider) VerifyToken(token string) bool {
 	return token == userToken || token == adminToken
 }
 
-func (provider SimpleTokenProvider) VerifyOnAdmin(token string) bool {
+func (provider Provider) VerifyOnAdmin(token string) bool {
 	return token == adminToken
 }

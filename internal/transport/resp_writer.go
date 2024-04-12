@@ -11,7 +11,7 @@ type RespWriterError struct {
 }
 
 type RespWriterBannerCreated struct {
-	BannerId int `json:"banner_id"`
+	BannerID int `json:"banner_id"`
 }
 
 func ResponseWriteError(w http.ResponseWriter, statusCode int, errString string, logger *slog.Logger) {
@@ -40,7 +40,7 @@ func ResponseWriteBannerCreated(w http.ResponseWriter, id int, logger *slog.Logg
 	w.Header().Add("content-type", "application/json")
 
 	resp, err := json.Marshal(RespWriterBannerCreated{
-		BannerId: id,
+		BannerID: id,
 	})
 
 	if err != nil {

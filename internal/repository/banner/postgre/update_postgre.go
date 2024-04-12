@@ -1,4 +1,4 @@
-package banner_postgre
+package bannerpostgre
 
 import (
 	"context"
@@ -18,6 +18,7 @@ func (repo *bannerRepository) UpdateBanner(ctx context.Context, banner *banner_m
 		repo.logger.Warn(err.Error())
 		return err
 	}
+
 	defer func() {
 		if err := tx.Rollback(ctx); err != nil {
 			repo.logger.Warn(err.Error())
@@ -42,12 +43,15 @@ func (repo *bannerRepository) UpdateBanner(ctx context.Context, banner *banner_m
 			return err
 		}
 
-		var feauterId int
-		var tagsIDs []int
+		var (
+			feauterID int
+			tagsIDs   []int
+		)
+
 		if banner.FeatureID != nil {
-			feauterId = *banner.FeatureID
+			feauterID = *banner.FeatureID
 		} else {
-			feauterId = params.FeatureID
+			feauterID = params.FeatureID
 		}
 
 		if banner.TagsID != nil {
@@ -56,11 +60,12 @@ func (repo *bannerRepository) UpdateBanner(ctx context.Context, banner *banner_m
 			tagsIDs = params.TagIDs
 		}
 
-		if err = repo.insertCrossTable(ctx, tx, feauterId, banner.ID, tagsIDs); err != nil {
+		if err = repo.insertCrossTable(ctx, tx, feauterID, banner.ID, tagsIDs); err != nil {
 			repo.logger.Warn(err.Error())
 			return err
 		}
 	}
+
 	if err = tx.Commit(ctx); err != nil {
 		repo.logger.Warn(err.Error())
 		return err
@@ -70,16 +75,20 @@ func (repo *bannerRepository) UpdateBanner(ctx context.Context, banner *banner_m
 }
 
 func (repo *bannerRepository) updateOnlyBanner(ctx context.Context, tx pgx.Tx, banner *banner_model.BannerUpdate) error {
-	var tag pgconn.CommandTag
-	var err error
+	var (
+		tag pgconn.CommandTag
+		err error
+	)
 
 	check := func(tag pgconn.CommandTag, err error) error {
 		if err != nil {
 			return err
 		}
+
 		if tag.RowsAffected() != 1 {
 			return pgx.ErrNoRows
 		}
+
 		return nil
 	}
 
@@ -91,6 +100,7 @@ func (repo *bannerRepository) updateOnlyBanner(ctx context.Context, tx pgx.Tx, b
 			`
 		repo.logger.Debug(q)
 		tag, err = tx.Exec(ctx, q, banner.Content, *banner.IsActive, banner.ID)
+
 		return check(tag, err)
 	}
 
@@ -101,6 +111,7 @@ func (repo *bannerRepository) updateOnlyBanner(ctx context.Context, tx pgx.Tx, b
 		`
 		repo.logger.Debug(q)
 		tag, err = tx.Exec(ctx, q, banner.Content, banner.ID)
+
 		return check(tag, err)
 	}
 
@@ -111,6 +122,7 @@ func (repo *bannerRepository) updateOnlyBanner(ctx context.Context, tx pgx.Tx, b
 		`
 		repo.logger.Debug(q)
 		tag, err = tx.Exec(ctx, q, *banner.IsActive, banner.ID)
+
 		return check(tag, err)
 	}
 
@@ -121,6 +133,7 @@ func (repo *bannerRepository) updateOnlyBanner(ctx context.Context, tx pgx.Tx, b
 		`
 		repo.logger.Debug(q)
 		tag, err = tx.Exec(ctx, q, banner.ID)
+
 		return check(tag, err)
 	}
 
@@ -138,6 +151,7 @@ func (repo *bannerRepository) deleteCrossTable(ctx context.Context, tx pgx.Tx, b
 		repo.logger.Warn(err.Error())
 		return err
 	}
+
 	return nil
 }
 

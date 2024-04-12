@@ -1,4 +1,4 @@
-package redis_cache
+package rediscache
 
 import (
 	"context"
@@ -37,6 +37,7 @@ func (cache redisCache[K, V]) Add(ctx context.Context, key K, value V) (evicated
 		cache.logger.Warn(err.Error())
 		return false, err
 	}
+
 	return false, nil
 }
 
@@ -46,12 +47,14 @@ func (cache redisCache[K, V]) Get(ctx context.Context, key K) (value V, ok bool,
 		cache.logger.Warn(err.Error())
 		return value, false, err
 	}
+
 	cache.logger.Debug("get", slog.String("key", string(strKey)))
 
 	val, err := cache.client.Get(ctx, string(strKey)).Result()
 	if err == redis.Nil {
 		return value, false, nil
 	}
+
 	if err != nil {
 		return value, false, err
 	}
@@ -60,7 +63,9 @@ func (cache redisCache[K, V]) Get(ctx context.Context, key K) (value V, ok bool,
 		cache.logger.Warn(err.Error())
 		return value, false, err
 	}
+
 	cache.logger.Debug("get result", slog.Any("value", value), slog.Any("ok", ok))
+
 	return value, true, nil
 }
 
@@ -84,8 +89,7 @@ func (cache redisCache[K, V]) Remove(ctx context.Context, key K) (bool, error) {
 
 func NewRedisClient[K comparable, V any](ctx context.Context, redisCfg *config.RedisSettings,
 	cacheCfg *config.CacheSettings, logger *slog.Logger) (cache.Cache[K, V], error) {
-
-	time.Sleep(5 * time.Second)
+	time.Sleep(time.Duration(redisCfg.TimePrepare) * time.Second)
 	host := fmt.Sprintf("%s:%d", redisCfg.Host, redisCfg.Port)
 	client := redis.NewClient(&redis.Options{
 		Addr:     host,
@@ -96,6 +100,7 @@ func NewRedisClient[K comparable, V any](ctx context.Context, redisCfg *config.R
 	if _, err := client.Ping(ctx).Result(); err != nil {
 		return nil, err
 	}
+
 	return redisCache[K, V]{
 		client: client,
 		logger: logger,

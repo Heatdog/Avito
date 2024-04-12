@@ -1,4 +1,4 @@
-package banner_model
+package bannermodel
 
 import (
 	"encoding/json"
@@ -7,7 +7,7 @@ import (
 	"github.com/go-playground/validator/v10"
 )
 
-func ValidateJson(fl validator.FieldLevel) bool {
+func ValidateJSON(fl validator.FieldLevel) bool {
 	data, err := json.Marshal(fl.Field().Interface())
 	if err != nil {
 		return false
@@ -17,34 +17,35 @@ func ValidateJson(fl validator.FieldLevel) bool {
 	if err := json.Unmarshal(data, &js); err != nil {
 		return false
 	}
+
 	return true
 }
 
 type BannerInsert struct {
+	Content   interface{} `json:"content,omitempty" validate:"json,required" swaggertype:"object"`
 	TagsID    []int       `json:"tag_id,omitempty" validate:"required,min=1,dive,numeric"`
 	FeatureID int         `json:"feature_id,omitempty" validate:"required,numeric"`
-	Content   interface{} `json:"content,omitempty" validate:"json,required" swaggertype:"object"`
 	IsActive  bool        `json:"is_active,omitempty" validate:"omitempty,boolean"`
 }
 
 type BannerUpdate struct {
-	ID        int         `json:"banner_id," validate:"numeric,required" swaggerignore:"true"`
-	TagsID    *[]int      `json:"tag_id,omitempty" validate:"omitnil,min=1,dive,numeric"`
-	FeatureID *int        `json:"feature_id,omitempty" validate:"omitnil,numeric"`
 	Content   interface{} `json:"content,omitempty" validate:"omitnil,json" swaggertype:"object"`
+	TagsID    *[]int      `json:"tag_id,omitempty" validate:"omitnil,min=1,dive,numeric"`
+	ID        int         `json:"banner_id," validate:"numeric,required" swaggerignore:"true"`
+	FeatureID *int        `json:"feature_id,omitempty" validate:"omitnil,numeric"`
 	IsActive  *bool       `json:"is_active,omitempty" validate:"omitnil,boolean"`
 }
 
 type Banner struct {
-	ID        int         `json:"banner_id"`
-	TagsID    []int       `json:"tag_ids"`
-	FeatureID int         `json:"feature_id"`
 	ContentV1 interface{} `json:"content_v1" swaggertype:"object"`
 	ContentV2 interface{} `json:"content_v2" swaggertype:"object"`
 	ContentV3 interface{} `json:"content_v3" swaggertype:"object"`
-	IsActive  bool        `json:"is_active"`
 	CreatedAt time.Time   `json:"created_at"`
 	UpdatedAt time.Time   `json:"updated_at"`
+	TagsID    []int       `json:"tag_ids"`
+	ID        int         `json:"banner_id"`
+	FeatureID int         `json:"feature_id"`
+	IsActive  bool        `json:"is_active"`
 }
 
 type BannerKey struct {

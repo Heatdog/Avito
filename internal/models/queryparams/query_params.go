@@ -1,4 +1,4 @@
-package query_params
+package queryparams
 
 import (
 	"strconv"
@@ -21,22 +21,24 @@ type BannerParams struct {
 
 func ValidateBannersParams(tagStr, featureStr, limitStr,
 	offsetStr string) (BannerParams, error) {
-
 	res := BannerParams{}
+
 	if tagStr != "" {
 		tag, err := strconv.Atoi(tagStr)
 		if err != nil {
 			return BannerParams{}, err
 		}
+
 		res.TagID = &tag
 	}
 
 	if featureStr != "" {
-		featureId, err := strconv.Atoi(featureStr)
+		featureID, err := strconv.Atoi(featureStr)
 		if err != nil {
 			return BannerParams{}, err
 		}
-		res.FeatureID = &featureId
+
+		res.FeatureID = &featureID
 	}
 
 	if limitStr != "" {
@@ -44,6 +46,7 @@ func ValidateBannersParams(tagStr, featureStr, limitStr,
 		if err != nil {
 			return BannerParams{}, err
 		}
+
 		res.Limit = &limit
 	}
 
@@ -52,6 +55,7 @@ func ValidateBannersParams(tagStr, featureStr, limitStr,
 		if err != nil {
 			return BannerParams{}, err
 		}
+
 		res.Offset = &offset
 	}
 
@@ -65,20 +69,23 @@ type DeleteBannerParams struct {
 
 func ValidateDeleteBannerParams(tagStr, featureStr string) (DeleteBannerParams, error) {
 	res := DeleteBannerParams{}
+
 	if tagStr != "" {
 		tag, err := strconv.Atoi(tagStr)
 		if err != nil {
 			return DeleteBannerParams{}, err
 		}
+
 		res.TagID = &tag
 	}
 
 	if featureStr != "" {
-		featureId, err := strconv.Atoi(featureStr)
+		featureID, err := strconv.Atoi(featureStr)
 		if err != nil {
 			return DeleteBannerParams{}, err
 		}
-		res.FeatureID = &featureId
+
+		res.FeatureID = &featureID
 	}
 
 	return res, nil

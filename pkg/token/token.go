@@ -1,6 +1,6 @@
 package token
 
-type TokenProvider interface {
+type Provider interface {
 	VerifyToken(token string) bool
 	VerifyOnAdmin(token string) bool
 }

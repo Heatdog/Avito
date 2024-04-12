@@ -1,12 +1,13 @@
-package banners_transport
+package bannerstransport
 
 import (
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"net/http"
 
-	_ "github.com/Heatdog/Avito/internal/models/banner"
-	"github.com/Heatdog/Avito/internal/models/query_params"
+	_ "github.com/Heatdog/Avito/internal/models/banner" // docs
+	"github.com/Heatdog/Avito/internal/models/queryparams"
 	"github.com/Heatdog/Avito/internal/transport"
 	middleware_transport "github.com/Heatdog/Avito/internal/transport/middleware"
 	"github.com/go-playground/validator/v10"
@@ -34,10 +35,32 @@ import (
 func (handler *bannersHandler) getUserBanner(w http.ResponseWriter, r *http.Request) {
 	handler.logger.Debug("get user banner handler")
 
-	token := r.Context().Value(middleware_transport.ContextKey{Key: "token"}).(string)
+	var token string
+
+	tokenIn := r.Context().Value(middleware_transport.ContextKey{Key: "token"})
+
+	if tokenIn != nil {
+		tokenStr, ok := tokenIn.(string)
+		if !ok {
+			err := fmt.Errorf("token in context error")
+			handler.logger.Warn(err.Error())
+			transport.ResponseWriteError(w, http.StatusInternalServerError, err.Error(), handler.logger)
+
+			return
+		}
+
+		token = tokenStr
+	} else {
+		err := fmt.Errorf("token in context error")
+		handler.logger.Warn(err.Error())
+		transport.ResponseWriteError(w, http.StatusInternalServerError, err.Error(), handler.logger)
+
+		return
+	}
+
 	handler.logger.Debug("token header", slog.String("token", token))
 
-	params := query_params.BannerUserParams{
+	params := queryparams.BannerUserParams{
 		TagID:            r.URL.Query().Get("tag_id"),
 		FeatureID:        r.URL.Query().Get("feature_id"),
 		UseLastrRevision: r.URL.Query().Get("use_last_revision"),
@@ -46,28 +69,35 @@ func (handler *bannersHandler) getUserBanner(w http.ResponseWriter, r *http.Requ
 	if params.UseLastrRevision == "" {
 		params.UseLastrRevision = "false"
 	}
+
 	if params.Version == "" {
 		params.Version = "1"
 	}
 
 	handler.logger.Debug("validate request params", slog.Any("params", params))
+
 	validate := validator.New(validator.WithRequiredStructEnabled())
 	if err := validate.Struct(params); err != nil {
 		handler.logger.Debug(err.Error())
 		transport.ResponseWriteError(w, http.StatusBadRequest, err.Error(), handler.logger)
+
 		return
 	}
+
 	handler.logger.Debug("valid successful")
 
 	content, err := handler.service.GetUserBanner(r.Context(), &params)
 	if err == pgx.ErrNoRows {
 		handler.logger.Debug(err.Error())
 		w.WriteHeader(http.StatusNotFound)
+
 		return
 	}
+
 	if err != nil {
 		handler.logger.Warn(err.Error())
 		transport.ResponseWriteError(w, http.StatusInternalServerError, err.Error(), handler.logger)
+
 		return
 	}
 
@@ -75,16 +105,20 @@ func (handler *bannersHandler) getUserBanner(w http.ResponseWriter, r *http.Requ
 	if err != nil {
 		handler.logger.Warn(err.Error())
 		transport.ResponseWriteError(w, http.StatusInternalServerError, err.Error(), handler.logger)
+
 		return
 	}
 
 	w.WriteHeader(http.StatusOK)
 	w.Header().Add("content-type", "application/json")
+
 	if _, err = w.Write(resp); err != nil {
 		handler.logger.Warn(err.Error())
 		transport.ResponseWriteError(w, http.StatusInternalServerError, err.Error(), handler.logger)
+
 		return
 	}
+
 	handler.logger.Debug(string(resp))
 }
 
@@ -108,15 +142,17 @@ func (handler *bannersHandler) getBanners(w http.ResponseWriter, r *http.Request
 	handler.logger.Debug("get banners handler")
 
 	handler.logger.Debug("read request query params")
-	tagIdStr := r.URL.Query().Get("tag_id")
-	featureIdStr := r.URL.Query().Get("feature_id")
+
+	tagIDStr := r.URL.Query().Get("tag_id")
+	featureIDStr := r.URL.Query().Get("feature_id")
 	limitStr := r.URL.Query().Get("limit")
 	offsetStr := r.URL.Query().Get("offset")
 
-	params, err := query_params.ValidateBannersParams(tagIdStr, featureIdStr, limitStr, offsetStr)
+	params, err := queryparams.ValidateBannersParams(tagIDStr, featureIDStr, limitStr, offsetStr)
 	if err != nil {
 		handler.logger.Debug(err.Error())
 		transport.ResponseWriteError(w, http.StatusBadRequest, err.Error(), handler.logger)
+
 		return
 	}
 
@@ -126,22 +162,28 @@ func (handler *bannersHandler) getBanners(w http.ResponseWriter, r *http.Request
 	if err != nil {
 		handler.logger.Warn(err.Error())
 		transport.ResponseWriteError(w, http.StatusInternalServerError, err.Error(), handler.logger)
+
 		return
 	}
 
 	resp, err := json.Marshal(banners)
+
 	if err != nil {
 		handler.logger.Warn(err.Error())
 		transport.ResponseWriteError(w, http.StatusInternalServerError, err.Error(), handler.logger)
+
 		return
 	}
 
 	w.WriteHeader(http.StatusOK)
 	w.Header().Add("content-type", "application/json")
+
 	if _, err = w.Write(resp); err != nil {
 		handler.logger.Warn(err.Error())
 		transport.ResponseWriteError(w, http.StatusInternalServerError, err.Error(), handler.logger)
+
 		return
 	}
+
 	handler.logger.Debug(string(resp))
 }

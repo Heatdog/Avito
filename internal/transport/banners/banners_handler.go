@@ -1,10 +1,10 @@
-package banners_transport
+package bannerstransport
 
 import (
 	"log/slog"
 	"net/http"
 
-	banner_service "github.com/Heatdog/Avito/internal/service/banner"
+	banner_service "github.com/Heatdog/Avito/internal/service/bannerservice"
 	"github.com/Heatdog/Avito/internal/transport"
 	middleware_transport "github.com/Heatdog/Avito/internal/transport/middleware"
 	"github.com/gorilla/mux"

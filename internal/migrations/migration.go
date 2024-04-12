@@ -35,6 +35,7 @@ func initTags(client client.Client) error {
 	for _, tag := range tags {
 		client.QueryRow(context.Background(), q, tag.name)
 	}
+
 	return nil
 }
 
@@ -66,12 +67,14 @@ func initFeatures(client client.Client) error {
 	for _, feature := range features {
 		client.QueryRow(context.Background(), q, feature.name)
 	}
+
 	return nil
 }
 
-func InitDb(client client.Client) error {
+func InitDB(client client.Client) error {
 	if err := initTags(client); err != nil {
 		return err
 	}
+
 	return initFeatures(client)
 }

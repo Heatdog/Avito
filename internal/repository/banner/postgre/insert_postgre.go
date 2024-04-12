@@ -1,4 +1,4 @@
-package banner_postgre
+package bannerpostgre
 
 import (
 	"context"
@@ -14,10 +14,12 @@ func (repo *bannerRepository) InsertBanner(ctx context.Context, banner *banner_m
 
 	repo.logger.Debug("begin transaction")
 	transaction, err := repo.dbClient.BeginTx(ctx, pgx.TxOptions{})
+
 	if err != nil {
 		repo.logger.Error(err.Error())
 		return 0, err
 	}
+
 	defer func() {
 		if err := transaction.Rollback(ctx); err != nil {
 			repo.logger.Warn(err.Error())
@@ -36,10 +38,12 @@ func (repo *bannerRepository) InsertBanner(ctx context.Context, banner *banner_m
 		repo.logger.Warn(err.Error())
 		return 0, err
 	}
+
 	if err = transaction.Commit(ctx); err != nil {
 		repo.logger.Warn(err.Error())
 		return 0, err
 	}
+
 	return id, nil
 }
 
@@ -61,13 +65,14 @@ func (repo *bannerRepository) insertInBannerTable(ctx context.Context, transacti
 	if err := row.Scan(&id); err != nil {
 		return 0, err
 	}
+
 	return id, nil
 }
 
-func (repo *bannerRepository) insertCrossTable(ctx context.Context, transaction pgx.Tx, featureID, bannerId int,
+func (repo *bannerRepository) insertCrossTable(ctx context.Context, transaction pgx.Tx, featureID, bannerID int,
 	tagIDs []int) error {
 	repo.logger.Debug("insert into features_tags_to_banners table", slog.Any("tagIds", tagIDs),
-		slog.Int("bannerId", bannerId), slog.Int("feauterIds", featureID))
+		slog.Int("bannerId", bannerID), slog.Int("feauterIds", featureID))
 
 	q := `
 		INSERT INTO features_tags_to_banners (feature_id, tag_id, banner_id)
@@ -75,8 +80,8 @@ func (repo *bannerRepository) insertCrossTable(ctx context.Context, transaction 
 	`
 	repo.logger.Debug("repo query", slog.String("query", q))
 
-	for _, tagId := range tagIDs {
-		tag, err := transaction.Exec(ctx, q, featureID, tagId, bannerId)
+	for _, tagID := range tagIDs {
+		tag, err := transaction.Exec(ctx, q, featureID, tagID, bannerID)
 		if err != nil {
 			return err
 		}

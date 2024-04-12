@@ -9,6 +9,8 @@ postgre_settings:
   database: banners_database
   username: postgres
   password: 123
+  time_prepare: 5
+  time_wait: 12
 
 password_key: 123
 
@@ -21,3 +23,4 @@ redis_settings:
   port: 6379
   password: 123
   database: 0
+  time_prepare: 5

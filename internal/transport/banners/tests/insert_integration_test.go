@@ -14,11 +14,11 @@ import (
 
 	banner_model "github.com/Heatdog/Avito/internal/models/banner"
 	banner_postgre "github.com/Heatdog/Avito/internal/repository/banner/postgre"
-	banner_service "github.com/Heatdog/Avito/internal/service/banner"
+	banner_service "github.com/Heatdog/Avito/internal/service/bannerservice"
 	banners_transport "github.com/Heatdog/Avito/internal/transport/banners"
 	middleware_transport "github.com/Heatdog/Avito/internal/transport/middleware"
 	hashicorp_lru "github.com/Heatdog/Avito/pkg/cache/hashi_corp"
-	"github.com/Heatdog/Avito/pkg/token/simple_token"
+	simpletoken "github.com/Heatdog/Avito/pkg/token/simple_token"
 	"github.com/gorilla/mux"
 	"github.com/hashicorp/golang-lru/v2/expirable"
 	"github.com/jackc/pgx/v5"
@@ -44,7 +44,7 @@ func TestInsertBanner(t *testing.T) {
 		time.Minute*time.Duration(5))
 	cache := hashicorp_lru.NewLRU(logger, cacheLRU)
 
-	tokenProvider := simple_token.NewSimpleTokenProvider()
+	tokenProvider := simpletoken.NewSimpleTokenProvider()
 
 	logger.Debug("register middlewre")
 	middleware := middleware_transport.NewMiddleware(logger, tokenProvider)
@@ -96,7 +96,7 @@ func TestInsertBanner(t *testing.T) {
 			statusCode: http.StatusCreated,
 			err:        nil,
 
-			mockFunc: func(banner banner_model.BannerInsert, id int, err error) {
+			mockFunc: func(banner banner_model.BannerInsert, id int, _ error) {
 				dbMock.ExpectBeginTx(pgx.TxOptions{})
 				defer dbMock.ExpectCommit()
 
@@ -123,7 +123,7 @@ func TestInsertBanner(t *testing.T) {
 			statusCode: http.StatusForbidden,
 			err:        nil,
 
-			mockFunc: func(banner banner_model.BannerInsert, id int, err error) {},
+			mockFunc: func(_ banner_model.BannerInsert, _ int, _ error) {},
 		},
 		{
 			name:     "Unauthorized",
@@ -134,7 +134,7 @@ func TestInsertBanner(t *testing.T) {
 			statusCode: http.StatusUnauthorized,
 			err:        nil,
 
-			mockFunc: func(banner banner_model.BannerInsert, id int, err error) {},
+			mockFunc: func(_ banner_model.BannerInsert, _ int, _ error) {},
 		},
 		{
 			name:     "validation error",
@@ -151,7 +151,7 @@ func TestInsertBanner(t *testing.T) {
 			statusCode: http.StatusBadRequest,
 			err:        fmt.Errorf(`Key: 'BannerInsert.Content' Error:Field validation for 'Content' failed on the 'json' tag`),
 
-			mockFunc: func(banner banner_model.BannerInsert, id int, err error) {},
+			mockFunc: func(_ banner_model.BannerInsert, _ int, _ error) {},
 		},
 		{
 			name:  "dublication error",
@@ -175,7 +175,6 @@ func TestInsertBanner(t *testing.T) {
 			err:        fmt.Errorf("ERROR: duplicate key value violates unique constraint \"features_tags_to_banners_pk\" (SQLSTATE 23505)"),
 
 			mockFunc: func(banner banner_model.BannerInsert, id int, err error) {
-
 				dbMock.ExpectBeginTx(pgx.TxOptions{})
 				defer dbMock.ExpectRollback()
 
@@ -189,7 +188,6 @@ func TestInsertBanner(t *testing.T) {
 				dbMock.ExpectExec("INSERT INTO features_tags_to_banners").
 					WithArgs(banner.FeatureID, banner.TagsID[0], id).
 					WillReturnError(err)
-
 			},
 		},
 		{
@@ -213,8 +211,7 @@ func TestInsertBanner(t *testing.T) {
 			statusCode: http.StatusInternalServerError,
 			err:        fmt.Errorf("internal error"),
 
-			mockFunc: func(banner banner_model.BannerInsert, id int, err error) {
-
+			mockFunc: func(banner banner_model.BannerInsert, _ int, err error) {
 				dbMock.ExpectBeginTx(pgx.TxOptions{})
 				defer dbMock.ExpectRollback()
 
@@ -227,7 +224,6 @@ func TestInsertBanner(t *testing.T) {
 
 	for _, testCase := range testTable {
 		t.Run(testCase.name, func(t *testing.T) {
-
 			body, err := json.Marshal(testCase.reqBanner)
 			if err != nil {
 				t.Fatal(err)

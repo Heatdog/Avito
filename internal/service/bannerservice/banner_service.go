@@ -1,11 +1,11 @@
-package banner_service
+package bannerservice
 
 import (
 	"context"
 	"log/slog"
 
 	banner_model "github.com/Heatdog/Avito/internal/models/banner"
-	"github.com/Heatdog/Avito/internal/models/query_params"
+	"github.com/Heatdog/Avito/internal/models/queryparams"
 	banner_repository "github.com/Heatdog/Avito/internal/repository/banner"
 	"github.com/Heatdog/Avito/pkg/cache"
 	"github.com/Heatdog/Avito/pkg/token"
@@ -14,11 +14,11 @@ import (
 
 type BannerService interface {
 	InsertBanner(context context.Context, banner *banner_model.BannerInsert) (int, error)
-	GetUserBanner(context context.Context, params *query_params.BannerUserParams) (interface{}, error)
-	GetBanners(context context.Context, params *query_params.BannerParams) ([]banner_model.Banner, error)
+	GetUserBanner(context context.Context, params *queryparams.BannerUserParams) (interface{}, error)
+	GetBanners(context context.Context, params *queryparams.BannerParams) ([]banner_model.Banner, error)
 	DeleteBanner(context context.Context, id int) (bool, error)
 	UpdateBanner(context context.Context, banner *banner_model.BannerUpdate) error
-	DeleteBanners(context context.Context, params query_params.DeleteBannerParams)
+	DeleteBanners(context context.Context, params queryparams.DeleteBannerParams)
 	UpdateBannerVersion(context context.Context, id, version int) error
 }
 
@@ -26,11 +26,11 @@ type bannerService struct {
 	logger        *slog.Logger
 	repo          banner_repository.BannerRepository
 	cache         cache.Cache[banner_model.BannerKey, *banner_model.Banner]
-	tokenProvider token.TokenProvider
+	tokenProvider token.Provider
 }
 
 func NewBannerService(logger *slog.Logger, repo banner_repository.BannerRepository,
-	cache cache.Cache[banner_model.BannerKey, *banner_model.Banner], tokenProvider token.TokenProvider) BannerService {
+	cache cache.Cache[banner_model.BannerKey, *banner_model.Banner], tokenProvider token.Provider) BannerService {
 	return &bannerService{
 		logger:        logger,
 		repo:          repo,
@@ -46,8 +46,7 @@ func (service *bannerService) InsertBanner(ctx context.Context, banner *banner_m
 }
 
 func (service *bannerService) GetUserBanner(ctx context.Context,
-	params *query_params.BannerUserParams) (interface{}, error) {
-
+	params *queryparams.BannerUserParams) (interface{}, error) {
 	service.logger.Debug("get user banner service")
 
 	if params.UseLastrRevision == "false" {
@@ -58,10 +57,12 @@ func (service *bannerService) GetUserBanner(ctx context.Context,
 		if err != nil {
 			return "", err
 		}
+
 		if ok {
 			if !banner.IsActive && !service.tokenProvider.VerifyOnAdmin(params.Token) {
 				return "", pgx.ErrNoRows
 			}
+
 			switch params.Version {
 			case "1":
 				return banner.ContentV1, nil
@@ -76,18 +77,19 @@ func (service *bannerService) GetUserBanner(ctx context.Context,
 	}
 
 	banner, err := service.repo.GetUserBanner(ctx, params.TagID, params.FeatureID)
+
 	if err != nil {
 		return "", err
 	}
+
 	if !banner.IsActive && !service.tokenProvider.VerifyOnAdmin(params.Token) {
 		return "", pgx.ErrNoRows
 	}
-	go func(logger *slog.Logger, key banner_model.BannerKey, banner banner_model.Banner) {
 
+	go func(logger *slog.Logger, key banner_model.BannerKey, banner banner_model.Banner) {
 		if _, err := service.cache.Add(context.Background(), key, &banner); err != nil {
 			logger.Warn(err.Error())
 		}
-
 	}(service.logger, banner_model.BannerKey{
 		TagID:     params.TagID,
 		FeatureID: params.FeatureID,
@@ -105,9 +107,8 @@ func (service *bannerService) GetUserBanner(ctx context.Context,
 	}
 }
 
-func (service *bannerService) GetBanners(context context.Context, params *query_params.BannerParams) ([]banner_model.Banner,
+func (service *bannerService) GetBanners(context context.Context, params *queryparams.BannerParams) ([]banner_model.Banner,
 	error) {
-
 	service.logger.Debug("get banners")
 
 	res, err := service.repo.GetBanners(context, params)
@@ -142,7 +143,7 @@ func (service *bannerService) UpdateBanner(context context.Context, banner *bann
 	return nil
 }
 
-func (service *bannerService) DeleteBanners(context context.Context, params query_params.DeleteBannerParams) {
+func (service *bannerService) DeleteBanners(context context.Context, params queryparams.DeleteBannerParams) {
 	service.logger.Debug("delete banner params", slog.Any("params", params))
 
 	if err := service.repo.DeleteBanners(context, params); err != nil {

@@ -1,4 +1,4 @@
-package hashicorp_lru
+package hashicorplru
 
 import (
 	"context"
@@ -20,20 +20,22 @@ func NewLRU[K comparable, V any](logger *slog.Logger, cache *expirable.LRU[K, V]
 	}
 }
 
-func (lru LRU[K, V]) Get(ctx context.Context, key K) (V, bool, error) {
+func (lru LRU[K, V]) Get(_ context.Context, key K) (V, bool, error) {
 	lru.logger.Debug("get", slog.Any("key", key))
 	val, ok := lru.cache.Get(key)
 	lru.logger.Debug("get result", slog.Any("value", val), slog.Any("ok", ok))
+
 	return val, ok, nil
 }
 
-func (lru LRU[K, V]) Add(ctx context.Context, key K, value V) (bool, error) {
+func (lru LRU[K, V]) Add(_ context.Context, key K, value V) (bool, error) {
 	lru.logger.Debug("add", slog.Any("key", key), slog.Any("value", value))
 	evicated := lru.cache.Add(key, value)
+
 	return evicated, nil
 }
 
-func (lru LRU[K, V]) Remove(ctx context.Context, key K) (bool, error) {
+func (lru LRU[K, V]) Remove(_ context.Context, key K) (bool, error) {
 	lru.logger.Debug("delete", slog.Any("key", key))
 	return lru.cache.Remove(key), nil
 }

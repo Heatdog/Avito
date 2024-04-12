@@ -14,11 +14,11 @@ import (
 
 	banner_model "github.com/Heatdog/Avito/internal/models/banner"
 	banner_postgre "github.com/Heatdog/Avito/internal/repository/banner/postgre"
-	banner_service "github.com/Heatdog/Avito/internal/service/banner"
+	banner_service "github.com/Heatdog/Avito/internal/service/bannerservice"
 	banners_transport "github.com/Heatdog/Avito/internal/transport/banners"
 	middleware_transport "github.com/Heatdog/Avito/internal/transport/middleware"
 	hashicorp_lru "github.com/Heatdog/Avito/pkg/cache/hashi_corp"
-	"github.com/Heatdog/Avito/pkg/token/simple_token"
+	simpletoken "github.com/Heatdog/Avito/pkg/token/simple_token"
 	"github.com/gorilla/mux"
 	"github.com/hashicorp/golang-lru/v2/expirable"
 	"github.com/jackc/pgx/v5"
@@ -44,7 +44,7 @@ func TestUpdateBanner(t *testing.T) {
 		time.Minute*time.Duration(5))
 	cache := hashicorp_lru.NewLRU(logger, cacheLRU)
 
-	tokenProvider := simple_token.NewSimpleTokenProvider()
+	tokenProvider := simpletoken.NewSimpleTokenProvider()
 
 	logger.Debug("register middlewre")
 	middleware := middleware_transport.NewMiddleware(logger, tokenProvider)
@@ -96,7 +96,7 @@ func TestUpdateBanner(t *testing.T) {
 			statusCode: http.StatusOK,
 			err:        nil,
 
-			mockFunc: func(banner banner_model.BannerUpdate, err error) {
+			mockFunc: func(banner banner_model.BannerUpdate, _ error) {
 				dbMock.ExpectBeginTx(pgx.TxOptions{})
 				defer dbMock.ExpectCommit()
 
@@ -137,14 +137,13 @@ func TestUpdateBanner(t *testing.T) {
 			statusCode: http.StatusNotFound,
 			err:        nil,
 
-			mockFunc: func(banner banner_model.BannerUpdate, err error) {
+			mockFunc: func(banner banner_model.BannerUpdate, _ error) {
 				dbMock.ExpectBeginTx(pgx.TxOptions{})
 				defer dbMock.ExpectRollback()
 
 				dbMock.ExpectExec("UPDATE banners").
 					WithArgs(banner.ID).
 					WillReturnResult(pgxmock.NewResult("UPDATE", 0))
-
 			},
 		},
 		{
@@ -162,14 +161,13 @@ func TestUpdateBanner(t *testing.T) {
 			statusCode: http.StatusOK,
 			err:        nil,
 
-			mockFunc: func(banner banner_model.BannerUpdate, err error) {
+			mockFunc: func(banner banner_model.BannerUpdate, _ error) {
 				dbMock.ExpectBeginTx(pgx.TxOptions{})
 				defer dbMock.ExpectCommit()
 
 				dbMock.ExpectExec("UPDATE banners").
 					WithArgs(*banner.IsActive, banner.ID).
 					WillReturnResult(pgxmock.NewResult("UPDATE", 1))
-
 			},
 		},
 		{
@@ -187,7 +185,7 @@ func TestUpdateBanner(t *testing.T) {
 			statusCode: http.StatusOK,
 			err:        nil,
 
-			mockFunc: func(banner banner_model.BannerUpdate, err error) {
+			mockFunc: func(banner banner_model.BannerUpdate, _ error) {
 				dbMock.ExpectBeginTx(pgx.TxOptions{})
 				defer dbMock.ExpectCommit()
 
@@ -211,7 +209,6 @@ func TestUpdateBanner(t *testing.T) {
 						WithArgs(1, tagID, banner.ID).
 						WillReturnResult(pgxmock.NewResult("INSERT", 1))
 				}
-
 			},
 		},
 		{
@@ -229,7 +226,7 @@ func TestUpdateBanner(t *testing.T) {
 			statusCode: http.StatusOK,
 			err:        nil,
 
-			mockFunc: func(banner banner_model.BannerUpdate, err error) {
+			mockFunc: func(banner banner_model.BannerUpdate, _ error) {
 				dbMock.ExpectBeginTx(pgx.TxOptions{})
 				defer dbMock.ExpectCommit()
 
@@ -251,7 +248,6 @@ func TestUpdateBanner(t *testing.T) {
 				dbMock.ExpectExec("INSERT INTO features_tags_to_banners").
 					WithArgs(*banner.FeatureID, 2, banner.ID).
 					WillReturnResult(pgxmock.NewResult("INSERT", 1))
-
 			},
 		},
 		{
@@ -291,7 +287,6 @@ func TestUpdateBanner(t *testing.T) {
 				dbMock.ExpectExec("INSERT INTO features_tags_to_banners").
 					WithArgs(*banner.FeatureID, 2, banner.ID).
 					WillReturnError(err)
-
 			},
 		},
 		{
@@ -316,7 +311,6 @@ func TestUpdateBanner(t *testing.T) {
 				dbMock.ExpectExec("UPDATE banners").
 					WithArgs(banner.ID).
 					WillReturnError(err)
-
 			},
 		},
 		{
@@ -328,7 +322,7 @@ func TestUpdateBanner(t *testing.T) {
 			statusCode: http.StatusForbidden,
 			err:        nil,
 
-			mockFunc: func(banner banner_model.BannerUpdate, err error) {},
+			mockFunc: func(_ banner_model.BannerUpdate, _ error) {},
 		},
 		{
 			name:     "Unauthorized",
@@ -339,13 +333,12 @@ func TestUpdateBanner(t *testing.T) {
 			statusCode: http.StatusUnauthorized,
 			err:        nil,
 
-			mockFunc: func(banner banner_model.BannerUpdate, err error) {},
+			mockFunc: func(_ banner_model.BannerUpdate, _ error) {},
 		},
 	}
 
 	for _, testCase := range testTable {
 		t.Run(testCase.name, func(t *testing.T) {
-
 			body, err := json.Marshal(testCase.reqBanner)
 			if err != nil {
 				t.Fatal(err)

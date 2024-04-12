@@ -10,13 +10,13 @@ import (
 	"time"
 
 	banner_model "github.com/Heatdog/Avito/internal/models/banner"
-	"github.com/Heatdog/Avito/internal/models/query_params"
+	"github.com/Heatdog/Avito/internal/models/queryparams"
 	banner_postgre "github.com/Heatdog/Avito/internal/repository/banner/postgre"
-	banner_service "github.com/Heatdog/Avito/internal/service/banner"
+	banner_service "github.com/Heatdog/Avito/internal/service/bannerservice"
 	banners_transport "github.com/Heatdog/Avito/internal/transport/banners"
 	middleware_transport "github.com/Heatdog/Avito/internal/transport/middleware"
 	hashicorp_lru "github.com/Heatdog/Avito/pkg/cache/hashi_corp"
-	"github.com/Heatdog/Avito/pkg/token/simple_token"
+	simpletoken "github.com/Heatdog/Avito/pkg/token/simple_token"
 	"github.com/gorilla/mux"
 	"github.com/hashicorp/golang-lru/v2/expirable"
 	"github.com/jackc/pgx/v5"
@@ -42,7 +42,7 @@ func TestMultyDeleteBanner(t *testing.T) {
 		time.Minute*time.Duration(5))
 	cache := hashicorp_lru.NewLRU(logger, cacheLRU)
 
-	tokenProvider := simple_token.NewSimpleTokenProvider()
+	tokenProvider := simpletoken.NewSimpleTokenProvider()
 
 	logger.Debug("register middlewre")
 	middleware := middleware_transport.NewMiddleware(logger, tokenProvider)
@@ -54,14 +54,14 @@ func TestMultyDeleteBanner(t *testing.T) {
 
 	bannerHandler.Register(router)
 
-	type mockBehavior func(params *query_params.DeleteBannerParams, deletedBanners []int, err error)
+	type mockBehavior func(params *queryparams.DeleteBannerParams, deletedBanners []int, err error)
 
 	testTable := []struct {
 		name  string
 		path  string
 		token string
 
-		params         *query_params.DeleteBannerParams
+		params         *queryparams.DeleteBannerParams
 		deletedBanners []int
 
 		statusCode int
@@ -74,7 +74,7 @@ func TestMultyDeleteBanner(t *testing.T) {
 			path:  "/banner",
 			token: "admin_token",
 
-			params: &query_params.DeleteBannerParams{
+			params: &queryparams.DeleteBannerParams{
 				TagID:     Int(1),
 				FeatureID: Int(2),
 			},
@@ -83,7 +83,7 @@ func TestMultyDeleteBanner(t *testing.T) {
 			statusCode: http.StatusAccepted,
 			err:        nil,
 
-			mockFunc: func(params *query_params.DeleteBannerParams, deletedBanners []int, err error) {
+			mockFunc: func(params *queryparams.DeleteBannerParams, deletedBanners []int, _ error) {
 				dbMock.ExpectBeginTx(pgx.TxOptions{})
 				defer dbMock.ExpectCommit()
 
@@ -108,7 +108,7 @@ func TestMultyDeleteBanner(t *testing.T) {
 			path:  "/banner",
 			token: "admin_token",
 
-			params: &query_params.DeleteBannerParams{
+			params: &queryparams.DeleteBannerParams{
 				TagID:     Int(1),
 				FeatureID: Int(2),
 			},
@@ -117,7 +117,7 @@ func TestMultyDeleteBanner(t *testing.T) {
 			statusCode: http.StatusAccepted,
 			err:        fmt.Errorf("internal error"),
 
-			mockFunc: func(params *query_params.DeleteBannerParams, deletedBanners []int, err error) {
+			mockFunc: func(params *queryparams.DeleteBannerParams, _ []int, err error) {
 				dbMock.ExpectBeginTx(pgx.TxOptions{})
 				defer dbMock.ExpectRollback()
 
@@ -131,7 +131,7 @@ func TestMultyDeleteBanner(t *testing.T) {
 			path:  "/banner",
 			token: "admin_token",
 
-			params: &query_params.DeleteBannerParams{
+			params: &queryparams.DeleteBannerParams{
 				TagID: Int(1),
 			},
 			deletedBanners: []int{1, 2, 3},
@@ -139,7 +139,7 @@ func TestMultyDeleteBanner(t *testing.T) {
 			statusCode: http.StatusAccepted,
 			err:        nil,
 
-			mockFunc: func(params *query_params.DeleteBannerParams, deletedBanners []int, err error) {
+			mockFunc: func(params *queryparams.DeleteBannerParams, deletedBanners []int, _ error) {
 				dbMock.ExpectBeginTx(pgx.TxOptions{})
 				defer dbMock.ExpectCommit()
 
@@ -170,7 +170,7 @@ func TestMultyDeleteBanner(t *testing.T) {
 			statusCode: http.StatusForbidden,
 			err:        nil,
 
-			mockFunc: func(params *query_params.DeleteBannerParams, deletedBanners []int, err error) {},
+			mockFunc: func(_ *queryparams.DeleteBannerParams, _ []int, _ error) {},
 		},
 		{
 			name:  "Unauthorized",
@@ -183,13 +183,12 @@ func TestMultyDeleteBanner(t *testing.T) {
 			statusCode: http.StatusUnauthorized,
 			err:        nil,
 
-			mockFunc: func(params *query_params.DeleteBannerParams, deletedBanners []int, err error) {},
+			mockFunc: func(_ *queryparams.DeleteBannerParams, _ []int, _ error) {},
 		},
 	}
 
 	for _, testCase := range testTable {
 		t.Run(testCase.name, func(t *testing.T) {
-
 			r := httptest.NewRequest(http.MethodDelete, testCase.path, nil)
 
 			r.Header.Set("token", testCase.token)

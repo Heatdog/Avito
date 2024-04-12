@@ -1,10 +1,10 @@
-package banner_postgre
+package bannerpostgre
 
 import (
 	"context"
 	"log/slog"
 
-	"github.com/Heatdog/Avito/internal/models/query_params"
+	"github.com/Heatdog/Avito/internal/models/queryparams"
 	"github.com/jackc/pgx/v5"
 )
 
@@ -14,6 +14,7 @@ func (repo *bannerRepository) DeleteBanner(ctx context.Context, id int) (bool, e
 		repo.logger.Warn(err.Error())
 		return false, err
 	}
+
 	defer func() {
 		if err := tx.Rollback(ctx); err != nil {
 			repo.logger.Warn(err.Error())
@@ -25,19 +26,22 @@ func (repo *bannerRepository) DeleteBanner(ctx context.Context, id int) (bool, e
 		repo.logger.Warn(err.Error())
 		return false, err
 	}
+
 	if err = tx.Commit(ctx); err != nil {
 		repo.logger.Warn(err.Error())
 		return false, err
 	}
+
 	return res, nil
 }
 
-func (repo *bannerRepository) DeleteBanners(ctx context.Context, params query_params.DeleteBannerParams) error {
+func (repo *bannerRepository) DeleteBanners(ctx context.Context, params queryparams.DeleteBannerParams) error {
 	tx, err := repo.dbClient.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
 		repo.logger.Warn(err.Error())
 		return err
 	}
+
 	defer func() {
 		if err := tx.Rollback(ctx); err != nil {
 			repo.logger.Warn(err.Error())
@@ -56,17 +60,23 @@ func (repo *bannerRepository) DeleteBanners(ctx context.Context, params query_pa
 			return err
 		}
 	}
+
 	if err = tx.Commit(ctx); err != nil {
 		repo.logger.Warn(err.Error())
 		return err
 	}
+
 	return nil
 }
 
-func (repo *bannerRepository) getBannersID(ctx context.Context, tx pgx.Tx, params *query_params.DeleteBannerParams) ([]int, error) {
-	var res []int
-	var rows pgx.Rows
-	var err error
+func (repo *bannerRepository) getBannersID(ctx context.Context, tx pgx.Tx,
+	params *queryparams.DeleteBannerParams) ([]int, error) {
+	var (
+		res  []int
+		rows pgx.Rows
+		err  error
+	)
+
 	if params.FeatureID != nil && params.TagID != nil {
 		q := `
 			SELECT banner_id
@@ -79,7 +89,6 @@ func (repo *bannerRepository) getBannersID(ctx context.Context, tx pgx.Tx, param
 		if err != nil {
 			return nil, err
 		}
-
 	} else if params.FeatureID != nil {
 		q := `
 			SELECT banner_id
@@ -92,7 +101,6 @@ func (repo *bannerRepository) getBannersID(ctx context.Context, tx pgx.Tx, param
 		if err != nil {
 			return nil, err
 		}
-
 	} else if params.TagID != nil {
 		q := `
 			SELECT banner_id
@@ -105,18 +113,20 @@ func (repo *bannerRepository) getBannersID(ctx context.Context, tx pgx.Tx, param
 		if err != nil {
 			return nil, err
 		}
-
 	} else {
 		return res, nil
 	}
 
 	for rows.Next() {
 		var id int
+
 		if err = rows.Scan(&id); err != nil {
 			return res, err
 		}
+
 		res = append(res, id)
 	}
+
 	return res, nil
 }
 
@@ -136,5 +146,6 @@ func (repo *bannerRepository) deleteBanner(ctx context.Context, tx pgx.Tx, id in
 	if tag.RowsAffected() < 1 {
 		return false, nil
 	}
+
 	return true, nil
 }

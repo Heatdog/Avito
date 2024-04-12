@@ -14,13 +14,13 @@ import (
 	"time"
 
 	banner_model "github.com/Heatdog/Avito/internal/models/banner"
-	"github.com/Heatdog/Avito/internal/models/query_params"
+	"github.com/Heatdog/Avito/internal/models/queryparams"
 	banner_postgre "github.com/Heatdog/Avito/internal/repository/banner/postgre"
-	banner_service "github.com/Heatdog/Avito/internal/service/banner"
+	banner_service "github.com/Heatdog/Avito/internal/service/bannerservice"
 	banners_transport "github.com/Heatdog/Avito/internal/transport/banners"
 	middleware_transport "github.com/Heatdog/Avito/internal/transport/middleware"
 	hashicorp_lru "github.com/Heatdog/Avito/pkg/cache/hashi_corp"
-	"github.com/Heatdog/Avito/pkg/token/simple_token"
+	simpletoken "github.com/Heatdog/Avito/pkg/token/simple_token"
 	"github.com/gorilla/mux"
 	"github.com/hashicorp/golang-lru/v2/expirable"
 	"github.com/jackc/pgx/v5"
@@ -46,7 +46,7 @@ func TestGetUserBanner(t *testing.T) {
 		time.Minute*time.Duration(5))
 	cache := hashicorp_lru.NewLRU(logger, cacheLRU)
 
-	tokenProvider := simple_token.NewSimpleTokenProvider()
+	tokenProvider := simpletoken.NewSimpleTokenProvider()
 
 	logger.Debug("register middlewre")
 	middleware := middleware_transport.NewMiddleware(logger, tokenProvider)
@@ -58,13 +58,13 @@ func TestGetUserBanner(t *testing.T) {
 
 	bannerHandler.Register(router)
 
-	type mockBehavior func(banners *banner_model.Banner, params query_params.BannerUserParams, err error)
+	type mockBehavior func(banners *banner_model.Banner, params queryparams.BannerUserParams, err error)
 
 	testTable := []struct {
 		name   string
 		path   string
 		token  string
-		params query_params.BannerUserParams
+		params queryparams.BannerUserParams
 
 		respBanners *banner_model.Banner
 		statusCode  int
@@ -76,7 +76,7 @@ func TestGetUserBanner(t *testing.T) {
 			name:  "ok",
 			path:  "/user_banner?tag_id=1&feature_id=1&use_last_revision=true&version=1",
 			token: "user_token",
-			params: query_params.BannerUserParams{
+			params: queryparams.BannerUserParams{
 				TagID:            "1",
 				FeatureID:        "1",
 				UseLastrRevision: "true",
@@ -98,8 +98,7 @@ func TestGetUserBanner(t *testing.T) {
 			statusCode: http.StatusOK,
 			err:        nil,
 
-			mockFunc: func(banner *banner_model.Banner, params query_params.BannerUserParams, err error) {
-
+			mockFunc: func(banner *banner_model.Banner, params queryparams.BannerUserParams, _ error) {
 				row := pgxmock.NewRows([]string{"id", "content_v1", "content_v2", "content_v3", "is_active"})
 				row.AddRow(banner.ID, banner.ContentV1, banner.ContentV2, banner.ContentV3, banner.IsActive)
 
@@ -113,7 +112,7 @@ func TestGetUserBanner(t *testing.T) {
 			name:  "admin token",
 			path:  "/user_banner?tag_id=1&feature_id=1&use_last_revision=true&version=1",
 			token: "admin_token",
-			params: query_params.BannerUserParams{
+			params: queryparams.BannerUserParams{
 				TagID:            "1",
 				FeatureID:        "1",
 				UseLastrRevision: "true",
@@ -135,8 +134,7 @@ func TestGetUserBanner(t *testing.T) {
 			statusCode: http.StatusOK,
 			err:        nil,
 
-			mockFunc: func(banner *banner_model.Banner, params query_params.BannerUserParams, err error) {
-
+			mockFunc: func(banner *banner_model.Banner, params queryparams.BannerUserParams, _ error) {
 				row := pgxmock.NewRows([]string{"id", "content_v1", "content_v2", "content_v3", "is_active"})
 				row.AddRow(banner.ID, banner.ContentV1, banner.ContentV2, banner.ContentV3, banner.IsActive)
 
@@ -150,7 +148,7 @@ func TestGetUserBanner(t *testing.T) {
 			name:  "banner not found",
 			path:  "/user_banner?tag_id=5&feature_id=5&use_last_revision=false&version=1",
 			token: "user_token",
-			params: query_params.BannerUserParams{
+			params: queryparams.BannerUserParams{
 				TagID:            "5",
 				FeatureID:        "5",
 				UseLastrRevision: "true",
@@ -162,7 +160,7 @@ func TestGetUserBanner(t *testing.T) {
 			statusCode:  http.StatusNotFound,
 			err:         nil,
 
-			mockFunc: func(banner *banner_model.Banner, params query_params.BannerUserParams, err error) {
+			mockFunc: func(_ *banner_model.Banner, params queryparams.BannerUserParams, _ error) {
 				dbMock.ExpectQuery(`SELECT b.id, b.content_v1, b.content_v2, b.content_v3, b.is_active
 					FROM banners b JOIN features_tags_to_banners ftb`).
 					WithArgs(params.FeatureID, params.TagID).
@@ -173,7 +171,7 @@ func TestGetUserBanner(t *testing.T) {
 			name:  "use cache",
 			path:  "/user_banner?tag_id=1&feature_id=1&use_last_revision=false&version=1",
 			token: "admin_token",
-			params: query_params.BannerUserParams{
+			params: queryparams.BannerUserParams{
 				TagID:            "1",
 				FeatureID:        "1",
 				UseLastrRevision: "false",
@@ -195,7 +193,7 @@ func TestGetUserBanner(t *testing.T) {
 			statusCode: http.StatusOK,
 			err:        nil,
 
-			mockFunc: func(banner *banner_model.Banner, params query_params.BannerUserParams, err error) {
+			mockFunc: func(banner *banner_model.Banner, _ queryparams.BannerUserParams, _ error) {
 				for _, tag := range banner.TagsID {
 					if _, err := cache.Add(context.Background(), banner_model.BannerKey{
 						TagID:     strconv.Itoa(tag),
@@ -210,7 +208,7 @@ func TestGetUserBanner(t *testing.T) {
 			name:  "internal error",
 			path:  "/user_banner?tag_id=1&feature_id=1&use_last_revision=true&version=1",
 			token: "admin_token",
-			params: query_params.BannerUserParams{
+			params: queryparams.BannerUserParams{
 				TagID:            "1",
 				FeatureID:        "1",
 				UseLastrRevision: "true",
@@ -222,7 +220,7 @@ func TestGetUserBanner(t *testing.T) {
 			statusCode:  http.StatusInternalServerError,
 			err:         fmt.Errorf("internal error"),
 
-			mockFunc: func(banner *banner_model.Banner, params query_params.BannerUserParams, err error) {
+			mockFunc: func(_ *banner_model.Banner, params queryparams.BannerUserParams, err error) {
 				dbMock.ExpectQuery(`SELECT b.id, b.content_v1, b.content_v2, b.content_v3, b.is_active
 					FROM banners b JOIN features_tags_to_banners ftb`).
 					WithArgs(params.FeatureID, params.TagID).
@@ -233,31 +231,30 @@ func TestGetUserBanner(t *testing.T) {
 			name:   "no params",
 			path:   "/user_banner",
 			token:  "user_token",
-			params: query_params.BannerUserParams{},
+			params: queryparams.BannerUserParams{},
 
 			respBanners: nil,
 			statusCode:  http.StatusBadRequest,
 			err:         fmt.Errorf("Key: 'BannerUserParams.TagID' Error:Field validation for 'TagID' failed on the 'required' tag\nKey: 'BannerUserParams.FeatureID' Error:Field validation for 'FeatureID' failed on the 'required' tag"),
 
-			mockFunc: func(banner *banner_model.Banner, params query_params.BannerUserParams, err error) {},
+			mockFunc: func(_ *banner_model.Banner, _ queryparams.BannerUserParams, _ error) {},
 		},
 		{
 			name:   "no token",
 			path:   "/user_banner",
 			token:  "12321",
-			params: query_params.BannerUserParams{},
+			params: queryparams.BannerUserParams{},
 
 			respBanners: nil,
 			statusCode:  http.StatusUnauthorized,
 			err:         nil,
 
-			mockFunc: func(banner *banner_model.Banner, params query_params.BannerUserParams, err error) {},
+			mockFunc: func(_ *banner_model.Banner, _ queryparams.BannerUserParams, _ error) {},
 		},
 	}
 
 	for _, testCase := range testTable {
 		t.Run(testCase.name, func(t *testing.T) {
-
 			r := httptest.NewRequest(http.MethodGet, testCase.path, nil)
 
 			r.Header.Set("token", testCase.token)

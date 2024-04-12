@@ -1,4 +1,4 @@
-package banner_postgre
+package bannerpostgre
 
 import (
 	"log/slog"
