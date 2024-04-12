@@ -19,6 +19,6 @@
 * /banerr/{id}/{version} [patch] - версия v становиться основной у баннера id.
 - [x] 4. Метод вызывается асинхронно, при этом пользователю возвращается статус код 202.
 - [x] 5. Проведены интеграционные [тесты](internal/transport/banners/tests/) для всех endpoints. Используемый пакет для мока PostgreSQL - github.com/pashagolub/pgxmock/v2.
-- [x] 6.
+- [x] 6. Линтер добавлен
 
 [Примеры запросов](/examples/). Curl сгенерированы через Swagger.
