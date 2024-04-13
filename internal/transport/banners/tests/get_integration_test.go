@@ -62,7 +62,7 @@ func TestGetBanners(t *testing.T) {
 		FeatureID *int
 	}
 
-	type mockBehavior func(dbMock pgxmock.PgxPoolIface, banners []banner_model.Banner, params queryParams, err error)
+	type mockBehavior func(banners []banner_model.Banner, params queryParams, err error)
 
 	testTable := []struct {
 		name   string
@@ -109,7 +109,7 @@ func TestGetBanners(t *testing.T) {
 			statusCode: http.StatusOK,
 			err:        nil,
 
-			mockFunc: func(dbMock pgxmock.PgxPoolIface, banners []banner_model.Banner, _ queryParams, _ error) {
+			mockFunc: func(banners []banner_model.Banner, _ queryParams, _ error) {
 				rows := pgxmock.NewRows([]string{"id", "content_v1", "content_v2", "content_v3", "is_active",
 					"created_at", "updated_at"})
 				for _, banner := range banners {
@@ -157,7 +157,7 @@ func TestGetBanners(t *testing.T) {
 			statusCode: http.StatusOK,
 			err:        nil,
 
-			mockFunc: func(dbMock pgxmock.PgxPoolIface, banners []banner_model.Banner, params queryParams, _ error) {
+			mockFunc: func(banners []banner_model.Banner, params queryParams, _ error) {
 				rows := pgxmock.NewRows([]string{"id", "content_v1", "content_v2", "content_v3", "is_active",
 					"created_at", "updated_at"})
 				for _, banner := range banners {
@@ -210,7 +210,7 @@ func TestGetBanners(t *testing.T) {
 			statusCode: http.StatusOK,
 			err:        nil,
 
-			mockFunc: func(dbMock pgxmock.PgxPoolIface, banners []banner_model.Banner, params queryParams, _ error) {
+			mockFunc: func(banners []banner_model.Banner, params queryParams, _ error) {
 				rows := pgxmock.NewRows([]string{"id", "content_v1", "content_v2", "content_v3", "is_active",
 					"created_at", "updated_at"})
 				for _, banner := range banners {
@@ -261,7 +261,7 @@ func TestGetBanners(t *testing.T) {
 			statusCode: http.StatusOK,
 			err:        nil,
 
-			mockFunc: func(dbMock pgxmock.PgxPoolIface, banners []banner_model.Banner, _ queryParams, _ error) {
+			mockFunc: func(banners []banner_model.Banner, _ queryParams, _ error) {
 				rows := pgxmock.NewRows([]string{"id", "content_v1", "content_v2", "content_v3", "is_active",
 					"created_at", "updated_at"})
 				for _, banner := range banners {
@@ -313,7 +313,7 @@ func TestGetBanners(t *testing.T) {
 			statusCode: http.StatusOK,
 			err:        nil,
 
-			mockFunc: func(dbMock pgxmock.PgxPoolIface, banners []banner_model.Banner, params queryParams, _ error) {
+			mockFunc: func(banners []banner_model.Banner, params queryParams, _ error) {
 				rows := pgxmock.NewRows([]string{"id", "content_v1", "content_v2", "content_v3", "is_active",
 					"created_at", "updated_at"})
 				for _, banner := range banners {
@@ -354,7 +354,7 @@ func TestGetBanners(t *testing.T) {
 			statusCode:  http.StatusInternalServerError,
 			err:         fmt.Errorf("internal error"),
 
-			mockFunc: func(dbMock pgxmock.PgxPoolIface, _ []banner_model.Banner, params queryParams, err error) {
+			mockFunc: func(_ []banner_model.Banner, params queryParams, err error) {
 				dbMock.ExpectQuery(`SELECT b.id, b.content_v1, b.content_v2, b.content_v3, b.is_active, b.created_at, 
 				b.updated_at FROM banners b JOIN features_tags_to_banners ftb`).
 					WithArgs(&params.TagID).
@@ -371,7 +371,7 @@ func TestGetBanners(t *testing.T) {
 			statusCode:  http.StatusUnauthorized,
 			err:         nil,
 
-			mockFunc: func(_ pgxmock.PgxPoolIface, _ []banner_model.Banner, _ queryParams, _ error) {},
+			mockFunc: func(_ []banner_model.Banner, _ queryParams, _ error) {},
 		},
 		{
 			name:   "Forbidden",
@@ -383,7 +383,7 @@ func TestGetBanners(t *testing.T) {
 			statusCode:  http.StatusForbidden,
 			err:         nil,
 
-			mockFunc: func(_ pgxmock.PgxPoolIface, _ []banner_model.Banner, _ queryParams, _ error) {},
+			mockFunc: func(_ []banner_model.Banner, _ queryParams, _ error) {},
 		},
 	}
 
@@ -393,7 +393,7 @@ func TestGetBanners(t *testing.T) {
 
 			r.Header.Set("token", testCase.token)
 
-			testCase.mockFunc(dbMock, testCase.respBanners, testCase.params, testCase.err)
+			testCase.mockFunc(testCase.respBanners, testCase.params, testCase.err)
 
 			w := httptest.NewRecorder()
 
