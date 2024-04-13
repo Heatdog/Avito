@@ -20,7 +20,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/hashicorp/golang-lru/v2/expirable"
 	"github.com/jackc/pgx/v5"
-	"github.com/pashagolub/pgxmock/v2"
+	"github.com/pashagolub/pgxmock/v3"
 	"github.com/stretchr/testify/require"
 )
 
@@ -104,29 +104,6 @@ func TestMultyDeleteBanner(t *testing.T) {
 			},
 		},
 		{
-			name:  "internal error",
-			path:  "/banner",
-			token: "admin_token",
-
-			params: &queryparams.DeleteBannerParams{
-				TagID:     Int(1),
-				FeatureID: Int(2),
-			},
-			deletedBanners: []int{1, 2, 3},
-
-			statusCode: http.StatusAccepted,
-			err:        fmt.Errorf("internal error"),
-
-			mockFunc: func(params *queryparams.DeleteBannerParams, _ []int, err error) {
-				dbMock.ExpectBeginTx(pgx.TxOptions{})
-				defer dbMock.ExpectRollback()
-
-				dbMock.ExpectQuery("SELECT banner_id FROM features_tags_to_banners").
-					WithArgs(*params.TagID, *params.FeatureID).
-					WillReturnError(err)
-			},
-		},
-		{
 			name:  "tag only",
 			path:  "/banner",
 			token: "admin_token",
@@ -157,6 +134,29 @@ func TestMultyDeleteBanner(t *testing.T) {
 						WithArgs(id).
 						WillReturnResult(pgxmock.NewResult("DELETE", 1))
 				}
+			},
+		},
+		{
+			name:  "internal error",
+			path:  "/banner",
+			token: "admin_token",
+
+			params: &queryparams.DeleteBannerParams{
+				TagID:     Int(1),
+				FeatureID: Int(2),
+			},
+			deletedBanners: []int{1, 2, 3},
+
+			statusCode: http.StatusAccepted,
+			err:        fmt.Errorf("internal error"),
+
+			mockFunc: func(params *queryparams.DeleteBannerParams, _ []int, err error) {
+				dbMock.ExpectBeginTx(pgx.TxOptions{})
+				defer dbMock.ExpectRollback()
+
+				dbMock.ExpectQuery("SELECT banner_id FROM features_tags_to_banners").
+					WithArgs(*params.TagID, *params.FeatureID).
+					WillReturnError(err)
 			},
 		},
 		{

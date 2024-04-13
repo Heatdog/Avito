@@ -24,7 +24,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/hashicorp/golang-lru/v2/expirable"
 	"github.com/jackc/pgx/v5"
-	"github.com/pashagolub/pgxmock/v2"
+	"github.com/pashagolub/pgxmock/v3"
 	"github.com/stretchr/testify/require"
 )
 

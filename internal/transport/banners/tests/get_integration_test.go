@@ -20,7 +20,7 @@ import (
 	simpletoken "github.com/Heatdog/Avito/pkg/token/simple_token"
 	"github.com/gorilla/mux"
 	"github.com/hashicorp/golang-lru/v2/expirable"
-	"github.com/pashagolub/pgxmock/v2"
+	"github.com/pashagolub/pgxmock/v3"
 	"github.com/stretchr/testify/require"
 )
 
