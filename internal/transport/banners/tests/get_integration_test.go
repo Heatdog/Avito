@@ -92,7 +92,7 @@ func TestGetBanners(t *testing.T) {
 					ContentV3: nil,
 					IsActive:  true,
 					CreatedAt: time.Now(),
-					UpdatedAt: time.Now(),
+					UpdatedAt: time.UnixMilli(200),
 				},
 				{
 					ID:        2,
@@ -103,7 +103,7 @@ func TestGetBanners(t *testing.T) {
 					ContentV3: `{"title":"good_title3"}`,
 					IsActive:  false,
 					CreatedAt: time.Now(),
-					UpdatedAt: time.Now(),
+					UpdatedAt: time.UnixMilli(120),
 				},
 			},
 			statusCode: http.StatusOK,

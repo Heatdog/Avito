@@ -50,7 +50,7 @@ func (repo *bannerRepository) GetBanners(ctx context.Context, params *queryparam
 	}
 
 	sort.Slice(res, func(i, j int) bool {
-		return res[i].UpdatedAt.Before(res[j].UpdatedAt)
+		return res[i].UpdatedAt.After(res[j].UpdatedAt)
 	})
 
 	for i, banner := range res {

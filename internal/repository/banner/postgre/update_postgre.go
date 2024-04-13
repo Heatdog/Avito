@@ -21,7 +21,7 @@ func (repo *bannerRepository) UpdateBanner(ctx context.Context, banner *banner_m
 
 	defer func() {
 		if err := tx.Rollback(ctx); err != nil {
-			repo.logger.Warn(err.Error())
+			repo.logger.Debug(err.Error())
 		}
 	}()
 

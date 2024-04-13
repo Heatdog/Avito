@@ -22,7 +22,7 @@ func (repo *bannerRepository) InsertBanner(ctx context.Context, banner *banner_m
 
 	defer func() {
 		if err := transaction.Rollback(ctx); err != nil {
-			repo.logger.Warn(err.Error())
+			repo.logger.Debug(err.Error())
 		}
 	}()
 

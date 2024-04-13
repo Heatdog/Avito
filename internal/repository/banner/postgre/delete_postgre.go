@@ -44,7 +44,7 @@ func (repo *bannerRepository) DeleteBanners(ctx context.Context, params querypar
 
 	defer func() {
 		if err := tx.Rollback(ctx); err != nil {
-			repo.logger.Warn(err.Error())
+			repo.logger.Debug(err.Error())
 		}
 	}()
 
